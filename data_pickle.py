@@ -54,8 +54,7 @@ if os.path.exists(DIR):
 else:
     print('folder can not find')
 
-data_matrix = np.zeros(
-    (len(files), IMAGE_SIZE * IMAGE_SIZE * 3), dtype='uint8')
+data_matrix = np.zeros((len(files), IMAGE_SIZE * IMAGE_SIZE * 3), dtype='uint8')
 
 # Read annotation file
 load_annotation_file = open(ANNOTATION_FILE, 'r')
