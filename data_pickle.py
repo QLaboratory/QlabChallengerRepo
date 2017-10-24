@@ -8,10 +8,10 @@ IMAGE_SIZE = 32
 # DIR = "C:\\Users\\Air\\Desktop\\pickle_test\\dataset"
 # ANNOTATION_FILE = "./train_annotations.json"
 # ANNOTATION_DICT_FILE = "./train_dict_annotations.json"
-DIR = "D:\\QlabChallengerRepo\\dataset\\scene_train_images_20170904_content_resize"
-ANNOTATION_FILE = "./scene_train_annotations_20170904.json"
-ANNOTATION_DICT_FILE = "./scene_train_annotations_dict_20170904.json"
-OUTPUT_FILE = "ai_challenger_scene_train_content_resize"
+DIR = "D:\\QlabChallengerRepo\\dataset\\scene_validation_images_20170908_content_resize"
+ANNOTATION_FILE = "./scene_validation_annotations_20170908.json"
+ANNOTATION_DICT_FILE = "./scene_validation_annotations_dict_20170908.json"
+OUTPUT_FILE = "ai_challenger_scene_validation_content_resize"
 
 
 def ConvertImgToArray(filename):
