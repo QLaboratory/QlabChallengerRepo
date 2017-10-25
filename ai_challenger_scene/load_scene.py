@@ -93,7 +93,3 @@ def load_scene_data(img_rows, img_cols):
     Y_valid = np_utils.to_categorical(Y_valid[:nb_valid_samples], num_classes)
 
     return X_train, Y_train, X_valid, Y_valid
-
-
-data_set = load_scene_data(32, 32)
-print(data_set)
