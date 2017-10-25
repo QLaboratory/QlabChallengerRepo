@@ -7,9 +7,15 @@ import numpy as np
 from keras import backend as K
 from keras.utils import np_utils
 
-DATA_URL_SCENE_TRAIN = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_train_direct_resize"
-DATA_URL_SCENE_VALIDATION = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_validation"
-DATA_URL_SCENE_TEST = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_test"
+
+
+# DATA_URL_SCENE_TRAIN = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_train_direct_resize"
+# DATA_URL_SCENE_VALIDATION = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_validation"
+# DATA_URL_SCENE_TEST = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_test"
+
+DATA_URL_SCENE_TRAIN = "/home/qianlong/Study/AIChallenger/QlabChallengerRepo/dataset/ai_challenger_scene_train_direct_resize"
+DATA_URL_SCENE_VALIDATION = "/home/qianlong/Study/AIChallenger/QlabChallengerRepo/dataset/ai_challenger_scene_validation_direct_resize"
+DATA_URL_SCENE_TEST = "/home/qianlong/Study/AIChallenger/QlabChallengerRepo/dataset/ai_challenger_scene_test"
 
 nb_train_samples = 53879 # 53879 training samples
 nb_valid_samples = 7120 # 100 validation samples
@@ -90,3 +96,4 @@ def load_scene_data(img_rows, img_cols):
 
 
 data_set = load_scene_data(32, 32)
+print(data_set)
