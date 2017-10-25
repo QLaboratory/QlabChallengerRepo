@@ -208,10 +208,10 @@ if __name__ == '__main__':
 
     # Example to fine-tune on 3000 samples from Cifar10
 
-    img_rows, img_cols = 32, 32 # Resolution of inputs
+    img_rows, img_cols = 224, 224 # Resolution of inputs
     channel = 3
-    num_classes = 10 
-    batch_size = 16 
+    num_classes = 80 
+    batch_size = 1 
     nb_epoch = 10
 
     # Load Cifar10 data. Please implement your own load_data() module for your own dataset
