@@ -58,7 +58,7 @@ def densenet169_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
 
     # Initial convolution
     x = ZeroPadding2D((3, 3), name='conv1_zeropadding')(img_input)
-    x = Convolution2D(nb_filter, 7, 7, subsample=(2, 2), name='conv1', bias=False)(x)
+    x = Convolution2D( nb_filter, 7, 7, subsample=(2, 2), name='conv1', bias=False)(x)
     x = BatchNormalization(epsilon=eps, axis=concat_axis, name='conv1_bn')(x)
     x = Scale(axis=concat_axis, name='conv1_scale')(x)
     x = Activation('relu', name='relu1')(x)
@@ -204,6 +204,7 @@ def dense_block(x, stage, nb_layers, nb_filter, growth_rate, dropout_rate=None, 
 
     return concat_feat, nb_filter
 
+
 if __name__ == '__main__':
 
     # Example to fine-tune on 3000 samples from Cifar10
@@ -214,7 +215,7 @@ if __name__ == '__main__':
     batch_size = 1 
     nb_epoch = 10
 
-    # Load Cifar10 data. Please implement your own load_data() module for your own dataset
+    # Load Scene data. Please implement your own load_data() module for your own dataset
     X_train, Y_train, X_valid, Y_valid = load_scene_data(img_rows, img_cols)
 
     # Load our model

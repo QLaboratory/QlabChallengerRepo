@@ -4,14 +4,14 @@ from PIL import Image
 import numpy as np
 import json
 
-IMAGE_SIZE = 32
+IMAGE_SIZE = 224
 # DIR = "C:\\Users\\Air\\Desktop\\pickle_test\\dataset"
 # ANNOTATION_FILE = "./train_annotations.json"
 # ANNOTATION_DICT_FILE = "./train_dict_annotations.json"
-DIR = "D:\\QlabChallengerRepo\\dataset\\scene_validation_images_20170908_content_resize"
-ANNOTATION_FILE = "./scene_validation_annotations_20170908.json"
-ANNOTATION_DICT_FILE = "./scene_validation_annotations_dict_20170908.json"
-OUTPUT_FILE = "ai_challenger_scene_validation_content_resize"
+DIR = "/home/yan/Desktop/QlabChallengerRepo/dataset/scene_train_images_20170904_direct_resize"
+ANNOTATION_FILE = "./scene_train_annotations_20170904.json"
+ANNOTATION_DICT_FILE = "./scene_train_annotations_dict_20170904.json"
+OUTPUT_FILE = "ai_challenger_scene_train_direct_resize"
 
 
 def ConvertImgToArray(filename):
@@ -36,7 +36,7 @@ def ConvertImgToArray(filename):
 def GetJpgList(p):
     if p == "":
         return []
-    #p = p.replace("/", "\\")
+    # p = p.replace("/", "\\")
     if p[-1] != "/":
         p = p + "/"
     file_list = os.listdir(p)
@@ -82,7 +82,7 @@ final_res = {b'data': data_matrix, b'labels': data_labels}
 # Write to the file
 f = open(OUTPUT_FILE, 'wb')
 
-pickle.dump(final_res, f,protool=4)  # dump the object to a file
+pickle.dump(final_res, f,protocol=4)  # dump the object to a file
 f.close()
 
 del final_res
