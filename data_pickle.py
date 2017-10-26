@@ -16,7 +16,7 @@ OUTPUT_FILE = "ai_challenger_scene_validation_content_resize"
 
 def ConvertImgToArray(filename):
 
-    im = Image.open(DIR + "\\" + filename)
+    im = Image.open(DIR + "/" + filename)
     im_array = np.array(im)
 
     im_array_r = im_array[:, :, 0]
@@ -36,9 +36,9 @@ def ConvertImgToArray(filename):
 def GetJpgList(p):
     if p == "":
         return []
-    p = p.replace("/", "\\")
-    if p[-1] != "\\":
-        p = p + "\\"
+    #p = p.replace("/", "\\")
+    if p[-1] != "/":
+        p = p + "/"
     file_list = os.listdir(p)
     jpg_list = []
     for i in file_list:
@@ -82,7 +82,7 @@ final_res = {b'data': data_matrix, b'labels': data_labels}
 # Write to the file
 f = open(OUTPUT_FILE, 'wb')
 
-pickle.dump(final_res, f)  # dump the object to a file
+pickle.dump(final_res, f,protool=4)  # dump the object to a file
 f.close()
 
 del final_res
