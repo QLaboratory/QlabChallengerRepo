@@ -87,20 +87,11 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
     x = Scale(axis=concat_axis, name='conv'+str(final_stage)+'_blk_scale')(x)
     x = Activation('relu', name='relu'+str(final_stage)+'_blk')(x)
 
-    x_fc = GlobalAveragePooling2D(name='pool'+str(final_stage))(x)
-    x_fc = Dense(1000, name='fc6')(x_fc)
-    x_fc = Activation('softmax', name='prob')(x_fc)
+    # x_fc = GlobalAveragePooling2D(name='pool'+str(final_stage))(x)
+    # x_fc = Dense(1000, name='fc6')(x_fc)
+    # x_fc = Activation('softmax', name='prob')(x_fc)
 
-    model = Model(img_input, x_fc, name='densenet')
-
-    if K.image_dim_ordering() == 'th':
-      # Use pre-trained weights for Theano backend
-      weights_path = 'imagenet_models/densenet161_weights_th.h5'
-    else:
-      # Use pre-trained weights for Tensorflow backend
-      # weights_path = 'imagenet_models/densenet161_weights_tf.h5'
-      weights_path = 'imagenet_models/MODEL_2017_10_27_07_07_56.h5'
-    model.load_weights(weights_path, by_name=True)
+    # model = Model(img_input, x_fc, name='densenet')
 
     # Truncate and replace softmax layer for transfer learning
     # Cannot use model.layers.pop() since model is not of Sequential() type
@@ -110,6 +101,15 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
     x_newfc = Activation('softmax', name='prob')(x_newfc)
 
     model = Model(img_input, x_newfc)
+
+    if K.image_dim_ordering() == 'th':
+      # Use pre-trained weights for Theano backend
+      weights_path = 'imagenet_models/densenet161_weights_th.h5'
+    else:
+      # Use pre-trained weights for Tensorflow backend
+      # weights_path = 'imagenet_models/densenet161_weights_tf.h5'
+      weights_path = 'imagenet_models/MODEL_2017_10_27_07_07_56.h5'
+    model.load_weights(weights_path, by_name=True)
 
     # Learning rate is changed to 0.001
     sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
@@ -218,7 +218,7 @@ if __name__ == '__main__':
     img_rows, img_cols = 224, 224 # Resolution of inputs
     channel = 3
     num_classes = 80
-    batch_size = 16
+    batch_size = 8
     nb_epoch = 10
 
     # Load Scene data. Please implement your own load_data() module for your own dataset
@@ -238,7 +238,7 @@ if __name__ == '__main__':
 
     CURRENT_TIME = "MODEL_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
     CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
-
+    model.save('imagenet_models/denset161_scene.h5')
     model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
 
     # Make predictions
