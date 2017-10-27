@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
-import cv2
 import pickle
+import cv2
 import numpy as np
 
 from keras import backend as K
@@ -9,13 +9,12 @@ from keras.utils import np_utils
 
 
 
-DATA_URL_SCENE_TRAIN = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_train_direct_resize"
-DATA_URL_SCENE_VALIDATION = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_validation_direct_resize"
-DATA_URL_SCENE_TEST = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_test"
-
-# DATA_URL_SCENE_TRAIN = "/home/qianlong/Study/AIChallenger/QlabChallengerRepo/dataset/ai_challenger_scene_train_direct_resize"
-# DATA_URL_SCENE_VALIDATION = "/home/qianlong/Study/AIChallenger/QlabChallengerRepo/dataset/ai_challenger_scene_validation_direct_resize"
-# DATA_URL_SCENE_TEST = "/home/qianlong/Study/AIChallenger/QlabChallengerRepo/dataset/ai_challenger_scene_test"
+# DATA_URL_SCENE_TRAIN = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_train_direct_resize"
+# DATA_URL_SCENE_VALIDATION = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_validation_direct_resize"
+# DATA_URL_SCENE_TEST = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_test"
+DATA_URL_SCENE_TRAIN = "/home/yan/Desktop/QlabChallengerRepo/dataset/ai_challenger_scene_train_direct_resize"
+DATA_URL_SCENE_VALIDATION = "/home/yan/Desktop/QlabChallengerRepo/dataset/ai_challenger_scene_validation_direct_resize"
+DATA_URL_SCENE_TEST = "/home/yan/Desktop/QlabChallengerRepo/dataset/ai_challenger_scene_test"
 
 nb_train_samples = 53879 # 53879 training samples
 nb_valid_samples = 7120 # 100 validation samples
@@ -47,7 +46,7 @@ def load_batch(fpath, label_key='labels'):
     data = d['data']
     labels = d[label_key]
 
-    data = data.reshape(data.shape[0], 3, 32, 32)
+    data = data.reshape(data.shape[0], 3, 224, 224)
     return data, labels
 
 
@@ -59,7 +58,7 @@ def load_data():
     """
     num_train_samples = 53879
 
-    x_train = np.zeros((num_train_samples, 3, 32, 32), dtype='uint8')
+    x_train = np.zeros((num_train_samples, 3, 224, 224), dtype='uint8')
     y_train = np.zeros((num_train_samples,), dtype='uint8')
 
     x_train, y_train = load_batch(DATA_URL_SCENE_TRAIN)

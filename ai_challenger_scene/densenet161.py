@@ -10,6 +10,8 @@ from keras.layers.pooling import AveragePooling2D, GlobalAveragePooling2D, MaxPo
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 import keras.backend as K
+import gc
+
 
 from sklearn.metrics import log_loss
 
@@ -17,7 +19,7 @@ from scale_layer import Scale
 
 from load_scene import load_scene_data
 
-SCENE_MODEL_SAVE_PATH = "/home/qianlong/Study/AIChallenger/QlabChallengerRepo/ai_challenger_scene/scene_models"
+SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/imagenet_models"
 
 def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.5, dropout_rate=0.0, weight_decay=1e-4, num_classes=None):
     '''
@@ -216,9 +218,10 @@ if __name__ == '__main__':
     img_rows, img_cols = 224, 224 # Resolution of inputs
     channel = 3
     num_classes = 80
-    batch_size = 1
-    # batch_size = 8
-    nb_epoch = 10
+    # batch_size = 1
+    batch_size = 8
+    # nb_epoch = 10
+    nb_epoch = 1
 
     # Load Scene data. Please implement your own load_data() module for your own dataset
     X_train, Y_train, X_valid, Y_valid = load_scene_data(img_rows, img_cols)
@@ -235,7 +238,7 @@ if __name__ == '__main__':
               validation_data=(X_valid, Y_valid),
               )
 
-    CURRENT_TIME = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+    CURRENT_TIME = "MODEL_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
     CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
 
     model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
@@ -245,3 +248,6 @@ if __name__ == '__main__':
 
     # Cross-entropy loss score
     score = log_loss(Y_valid, predictions_valid)
+    print("score:",score)
+
+    gc.collect()
