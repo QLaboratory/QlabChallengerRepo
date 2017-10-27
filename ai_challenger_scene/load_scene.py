@@ -9,13 +9,13 @@ from keras.utils import np_utils
 
 
 
-# DATA_URL_SCENE_TRAIN = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_train_direct_resize"
-# DATA_URL_SCENE_VALIDATION = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_validation"
-# DATA_URL_SCENE_TEST = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_test"
+DATA_URL_SCENE_TRAIN = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_train_direct_resize"
+DATA_URL_SCENE_VALIDATION = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_validation_direct_resize"
+DATA_URL_SCENE_TEST = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_test"
 
-DATA_URL_SCENE_TRAIN = "/home/qianlong/Study/AIChallenger/QlabChallengerRepo/dataset/ai_challenger_scene_train_direct_resize"
-DATA_URL_SCENE_VALIDATION = "/home/qianlong/Study/AIChallenger/QlabChallengerRepo/dataset/ai_challenger_scene_validation_direct_resize"
-DATA_URL_SCENE_TEST = "/home/qianlong/Study/AIChallenger/QlabChallengerRepo/dataset/ai_challenger_scene_test"
+# DATA_URL_SCENE_TRAIN = "/home/qianlong/Study/AIChallenger/QlabChallengerRepo/dataset/ai_challenger_scene_train_direct_resize"
+# DATA_URL_SCENE_VALIDATION = "/home/qianlong/Study/AIChallenger/QlabChallengerRepo/dataset/ai_challenger_scene_validation_direct_resize"
+# DATA_URL_SCENE_TEST = "/home/qianlong/Study/AIChallenger/QlabChallengerRepo/dataset/ai_challenger_scene_test"
 
 nb_train_samples = 53879 # 53879 training samples
 nb_valid_samples = 7120 # 100 validation samples
@@ -82,8 +82,8 @@ def load_scene_data(img_rows, img_cols):
 
     # Resize trainging images
     if K.image_dim_ordering() == 'th':
-        X_train = np.array([cv2.resize(img.transpose(1,2,0), (img_rows,img_cols)).transpose(2,0,1) for img in X_train[:nb_train_samples,:,:,:]])
-        X_valid = np.array([cv2.resize(img.transpose(1,2,0), (img_rows,img_cols)).transpose(2,0,1) for img in X_valid[:nb_valid_samples,:,:,:]])
+        X_train = np.array([cv2.resize(img.transpose(1,2,0), (img_rows, img_cols)).transpose(2,0,1) for img in X_train[:nb_train_samples, :, :, :]])
+        X_valid = np.array([cv2.resize(img.transpose(1,2,0), (img_rows, img_cols)).transpose(2,0,1) for img in X_valid[:nb_valid_samples, :, :, :]])
     else:
         X_train = np.array([cv2.resize(img, (img_rows,img_cols)) for img in X_train[:nb_train_samples,:,:,:]])
         X_valid = np.array([cv2.resize(img, (img_rows,img_cols)) for img in X_valid[:nb_valid_samples,:,:,:]])
