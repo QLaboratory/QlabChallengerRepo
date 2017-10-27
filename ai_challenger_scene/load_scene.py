@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
-import pickle
+from six.moves import cpickle as pickle
 import cv2
 import numpy as np
 
@@ -56,27 +56,26 @@ def load_data():
     # Returns
         Tuple of Numpy arrays: `(x_train, y_train), (x_test, y_test)`.
     """
-    num_train_samples = 53879
 
-    x_train = np.zeros((num_train_samples, 3, 224, 224), dtype='uint8')
-    y_train = np.zeros((num_train_samples,), dtype='uint8')
+    x_train = np.zeros((nb_train_samples, 3, 224, 224), dtype='uint8')
+    y_train = np.zeros((nb_train_samples,), dtype='uint8')
 
     x_train, y_train = load_batch(DATA_URL_SCENE_TRAIN)
-    x_test, y_test = load_batch(DATA_URL_SCENE_VALIDATION)
+    x_valid, y_valid = load_batch(DATA_URL_SCENE_VALIDATION)
 
     y_train = np.reshape(y_train, (len(y_train), 1))
-    y_test = np.reshape(y_test, (len(y_test), 1))
+    y_valid = np.reshape(y_valid, (len(y_valid), 1))
 
     if K.image_data_format() == 'channels_last':
         x_train = x_train.transpose(0, 2, 3, 1)
-        x_test = x_test.transpose(0, 2, 3, 1)
+        x_valid = x_valid.transpose(0, 2, 3, 1)
 
-    return (x_train, y_train), (x_test, y_test)
+    return (x_train, y_train), (x_valid, y_valid)
 
 
 def load_scene_data(img_rows, img_cols):
 
-    # Load cifar10 training and validation sets
+    # Load ai_challenger_sence training and validation sets
     (X_train, Y_train), (X_valid, Y_valid) = load_data()
 
     # Resize trainging images
