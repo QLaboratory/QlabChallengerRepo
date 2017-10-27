@@ -2,6 +2,7 @@
 import os
 import gc
 
+import pickle
 from datetime import datetime
 from keras.models import load_model
 from sklearn.metrics import log_loss
@@ -23,32 +24,30 @@ if __name__ == '__main__':
     nb_epoch = 1
 
     # Load Scene data. Please implement your own load_data() module for your own dataset
-    X_train, Y_train, X_valid, Y_valid = load_scene_data(img_rows, img_cols)
+    #X_train, Y_train, X_valid, Y_valid = load_scene_data(img_rows, img_cols)
 
     # Load our model
-    LAST_SAVED_MODEL = "MODEL"
+    LAST_SAVED_MODEL = "MODEL_SCENE_2017_20_27_20_37_06.h5"
     LAST_SAVED_MODEL_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, LAST_SAVED_MODEL)
     model = load_model(LAST_SAVED_MODEL)
 
     # Start Fine-tuning
-    model.fit(X_train, Y_train,
-              batch_size=batch_size,
-              epochs=nb_epoch,
-              shuffle=True,
-              verbose=1,
-              validation_data=(X_valid, Y_valid),
-              )
+    #model.fit(X_train, Y_train,
+              #batch_size=batch_size,
+              #epochs=nb_epoch,
+              #shuffle=True,
+              #verbose=1,
+              #validation_data=(X_valid, Y_valid),
+              #)
 
-    CURRENT_TIME = "MODEL_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
-    CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
-
-    model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
+    #model.save( os.path.join(SCENE_MODEL_SAVE_PATH, "MODEL_SCENE_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5") )
+    #model.save_weights(os.path.join(SCENE_MODEL_SAVE_PATH, "MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"))
 
     # Make predictions
-    predictions_valid = model.predict(X_valid, batch_size=batch_size, verbose=1)
+    #predictions_valid = model.predict(X_valid, batch_size=batch_size, verbose=1)
 
     # Cross-entropy loss score
-    score = log_loss(Y_valid, predictions_valid)
-    print("score: ", score)
+    #score = log_loss(Y_valid, predictions_valid)
+    #print("score: ", score)
 
     gc.collect()

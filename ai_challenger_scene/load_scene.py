@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
-from six.moves import cpickle as pickle
+import pickle
 import cv2
 import numpy as np
 
