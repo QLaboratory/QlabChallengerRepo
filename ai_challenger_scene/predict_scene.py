@@ -95,7 +95,7 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
 
     model = Model(img_input, x_newfc)
 
-    weights_path = 'imagenet_models/MODEL_2017_10_27_20_37_06.h5'
+    weights_path = 'imagenet_models/MODEL_WEIGHTS_2017_10_28_19_14_37.h5'
 
     model.load_weights(weights_path, by_name=True)
 
@@ -255,14 +255,15 @@ if __name__ == '__main__':
     for i in test_data_files:
         im = Image.open(os.path.join(SCENE_TEST_DATA_FOLDER_PATH, i))
         im_array = np.array(im).reshape(1, img_rows, img_cols, channel)
-        predictions_valid = model.predict(im_array, verbose=1)
+        predictions_valid = model.predict(im_array, verbose=0)
 
         predict_annotation_dic_temp = {}
         predict_annotation_dic_temp['image_id'] = i
         predict_label_id = predictions_valid[0].argsort()[-3:][::-1]
         predict_annotation_dic_temp['label_id'] = predict_label_id.tolist()
-        print(str(count) + "/" + totalnum)
-        print(predict_annotation_dic_temp)
+        if (count % 100 == 0):
+            print(str(count) + "/" + totalnum)
+        # print(predict_annotation_dic_temp)
         # print(predict_label_id)
         count += 1
         predict_json.append(predict_annotation_dic_temp)
