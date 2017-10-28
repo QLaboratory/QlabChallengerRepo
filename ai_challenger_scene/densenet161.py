@@ -14,9 +14,7 @@ import gc
 
 
 from sklearn.metrics import log_loss
-
 from scale_layer import Scale
-
 from load_scene import load_scene_data
 
 SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/imagenet_models"
@@ -238,10 +236,10 @@ if __name__ == '__main__':
               validation_data=(X_valid, Y_valid),
               )
 
-    CURRENT_TIME = "MODEL_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
+    CURRENT_TIME = "MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
     CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
 
-    model.save("MODEL_SCENE.h5")
+    model.save("MODEL_SCENE_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5")
     model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
 
     # Make predictions

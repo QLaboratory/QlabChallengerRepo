@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
+import os
+from datetime import datetime
 
 from keras.optimizers import SGD
 from keras.layers import Input, merge, ZeroPadding2D
 from keras.layers.core import Dense, Dropout, Activation
-from keras.layers.convolutional import Convolution2D
+from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import AveragePooling2D, GlobalAveragePooling2D, MaxPooling2D
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 import keras.backend as K
+import gc
+
 
 from sklearn.metrics import log_loss
 
@@ -15,16 +19,18 @@ from scale_layer import Scale
 
 from load_scene import load_scene_data
 
-def densenet169_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth_rate=32, nb_filter=64, reduction=0.5, dropout_rate=0.0, weight_decay=1e-4, num_classes=None):
+SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/imagenet_models"
+
+def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.5, dropout_rate=0.0, weight_decay=1e-4, num_classes=None):
     '''
-    DenseNet 169 Model for Keras
+    DenseNet 161 Model for Keras
 
     Model Schema is based on 
     https://github.com/flyyufelix/DenseNet-Keras
 
     ImageNet Pretrained Weights 
-    Theano: https://drive.google.com/open?id=0Byy2AcGyEVxfN0d3T1F1MXg0NlU
-    TensorFlow: https://drive.google.com/open?id=0Byy2AcGyEVxfSEc5UC1ROUFJdmM
+    Theano: https://drive.google.com/open?id=0Byy2AcGyEVxfVnlCMlBGTDR3RGs
+    TensorFlow: https://drive.google.com/open?id=0Byy2AcGyEVxfUDZwVjU2cFNidTA
 
     # Arguments
         nb_dense_block: number of dense blocks to add to end
@@ -53,12 +59,12 @@ def densenet169_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
       img_input = Input(shape=(3, 224, 224), name='data')
 
     # From architecture for ImageNet (Table 1 in the paper)
-    nb_filter = 64
-    nb_layers = [6,12,32,32] # For DenseNet-169
+    nb_filter = 96
+    nb_layers = [6,12,36,24] # For DenseNet-161
 
     # Initial convolution
     x = ZeroPadding2D((3, 3), name='conv1_zeropadding')(img_input)
-    x = Convolution2D( nb_filter, 7, 7, subsample=(2, 2), name='conv1', bias=False)(x)
+    x = Conv2D(nb_filter, (7, 7), name='conv1', strides=(2, 2), use_bias=False)(x)
     x = BatchNormalization(epsilon=eps, axis=concat_axis, name='conv1_bn')(x)
     x = Scale(axis=concat_axis, name='conv1_scale')(x)
     x = Activation('relu', name='relu1')(x)
@@ -81,20 +87,11 @@ def densenet169_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
     x = Scale(axis=concat_axis, name='conv'+str(final_stage)+'_blk_scale')(x)
     x = Activation('relu', name='relu'+str(final_stage)+'_blk')(x)
 
-    x_fc = GlobalAveragePooling2D(name='pool'+str(final_stage))(x)
-    x_fc = Dense(1000, name='fc6')(x_fc)
-    x_fc = Activation('softmax', name='prob')(x_fc)
+    # x_fc = GlobalAveragePooling2D(name='pool'+str(final_stage))(x)
+    # x_fc = Dense(1000, name='fc6')(x_fc)
+    # x_fc = Activation('softmax', name='prob')(x_fc)
 
-    model = Model(img_input, x_fc, name='densenet')
-
-    if K.image_dim_ordering() == 'th':
-      # Use pre-trained weights for Theano backend
-      weights_path = 'imagenet_models/densenet169_weights_th.h5'
-    else:
-      # Use pre-trained weights for Tensorflow backend
-      weights_path = 'imagenet_models/densenet169_weights_tf.h5'
-
-    model.load_weights(weights_path, by_name=True)
+    # model = Model(img_input, x_fc, name='densenet')
 
     # Truncate and replace softmax layer for transfer learning
     # Cannot use model.layers.pop() since model is not of Sequential() type
@@ -104,6 +101,15 @@ def densenet169_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
     x_newfc = Activation('softmax', name='prob')(x_newfc)
 
     model = Model(img_input, x_newfc)
+
+    if K.image_dim_ordering() == 'th':
+      # Use pre-trained weights for Theano backend
+      weights_path = 'imagenet_models/densenet161_weights_th.h5'
+    else:
+      # Use pre-trained weights for Tensorflow backend
+      # weights_path = 'imagenet_models/densenet161_weights_tf.h5'
+      weights_path = 'imagenet_models/MODEL_WEIGHTS_2017_10_27_20_37_06.h5'
+    model.load_weights(weights_path, by_name=True)
 
     # Learning rate is changed to 0.001
     sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
@@ -131,7 +137,7 @@ def conv_block(x, stage, branch, nb_filter, dropout_rate=None, weight_decay=1e-4
     x = BatchNormalization(epsilon=eps, axis=concat_axis, name=conv_name_base+'_x1_bn')(x)
     x = Scale(axis=concat_axis, name=conv_name_base+'_x1_scale')(x)
     x = Activation('relu', name=relu_name_base+'_x1')(x)
-    x = Convolution2D(inter_channel, 1, 1, name=conv_name_base+'_x1', bias=False)(x)
+    x = Conv2D(inter_channel, (1, 1), name=conv_name_base+'_x1', use_bias=False)(x)
 
     if dropout_rate:
         x = Dropout(dropout_rate)(x)
@@ -141,7 +147,7 @@ def conv_block(x, stage, branch, nb_filter, dropout_rate=None, weight_decay=1e-4
     x = Scale(axis=concat_axis, name=conv_name_base+'_x2_scale')(x)
     x = Activation('relu', name=relu_name_base+'_x2')(x)
     x = ZeroPadding2D((1, 1), name=conv_name_base+'_x2_zeropadding')(x)
-    x = Convolution2D(nb_filter, 3, 3, name=conv_name_base+'_x2', bias=False)(x)
+    x = Conv2D(nb_filter, (3, 3), name=conv_name_base+'_x2', use_bias=False)(x)
 
     if dropout_rate:
         x = Dropout(dropout_rate)(x)
@@ -168,7 +174,7 @@ def transition_block(x, stage, nb_filter, compression=1.0, dropout_rate=None, we
     x = BatchNormalization(epsilon=eps, axis=concat_axis, name=conv_name_base+'_bn')(x)
     x = Scale(axis=concat_axis, name=conv_name_base+'_scale')(x)
     x = Activation('relu', name=relu_name_base)(x)
-    x = Convolution2D(int(nb_filter * compression), 1, 1, name=conv_name_base, bias=False)(x)
+    x = Conv2D(int(nb_filter * compression), 1, 1, name=conv_name_base, use_bias=False)(x)
 
     if dropout_rate:
         x = Dropout(dropout_rate)(x)
@@ -211,27 +217,35 @@ if __name__ == '__main__':
 
     img_rows, img_cols = 224, 224 # Resolution of inputs
     channel = 3
-    num_classes = 80 
-    batch_size = 1 
-    nb_epoch = 10
+    num_classes = 80
+    batch_size = 8
+    nb_epoch = 20
 
     # Load Scene data. Please implement your own load_data() module for your own dataset
     X_train, Y_train, X_valid, Y_valid = load_scene_data(img_rows, img_cols)
 
     # Load our model
-    model = densenet169_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes)
+    model = densenet161_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes)
 
     # Start Fine-tuning
     model.fit(X_train, Y_train,
               batch_size=batch_size,
-              nb_epoch=nb_epoch,
+              epochs=nb_epoch,
               shuffle=True,
               verbose=1,
               validation_data=(X_valid, Y_valid),
               )
+
+    CURRENT_TIME = "MODEL_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
+    CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
+    model.save('imagenet_models/MODEL_SCENE_'+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5")
+    model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
 
     # Make predictions
     predictions_valid = model.predict(X_valid, batch_size=batch_size, verbose=1)
 
     # Cross-entropy loss score
     score = log_loss(Y_valid, predictions_valid)
+    print("score:",score)
+
+    gc.collect()
