@@ -108,11 +108,11 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
     else:
       # Use pre-trained weights for Tensorflow backend
       # weights_path = 'imagenet_models/densenet161_weights_tf.h5'
-      weights_path = 'imagenet_models/MODEL_WEIGHTS_2017_10_27_20_37_06.h5'
+      weights_path = 'imagenet_models/MODEL_WEIGHTS_2017_10_28_19_14_37.h5'
     model.load_weights(weights_path, by_name=True)
 
     # Learning rate is changed to 0.001
-    sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
+    sgd = SGD(lr=5e-4, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 
     return model
@@ -219,7 +219,7 @@ if __name__ == '__main__':
     channel = 3
     num_classes = 80
     batch_size = 8
-    nb_epoch = 20
+    nb_epoch = 10
 
     # Load Scene data. Please implement your own load_data() module for your own dataset
     X_train, Y_train, X_valid, Y_valid = load_scene_data(img_rows, img_cols)
@@ -236,9 +236,9 @@ if __name__ == '__main__':
               validation_data=(X_valid, Y_valid),
               )
 
-    CURRENT_TIME = "MODEL_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
+    CURRENT_TIME = "MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
     CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
-    model.save('imagenet_models/MODEL_SCENE_'+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5")
+    model.save('MODEL_SCENE_'+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5")
     model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
 
     # Make predictions
