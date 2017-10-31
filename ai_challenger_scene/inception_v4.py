@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import os
+from datetime import datetime
 
 from keras.models import Sequential
 from keras.optimizers import SGD
@@ -6,10 +8,13 @@ from keras.layers import Input, Dense, Convolution2D, MaxPooling2D, AveragePooli
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 from keras import backend as K
+import gc
 
 from sklearn.metrics import log_loss
+from scale_layer import Scale
+from load_scene import load_scene_data
 
-from load_cifar10 import load_cifar10_data
+SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/inception_models"
 
 def conv2d_bn(x, nb_filter, nb_row, nb_col,
               border_mode='same', subsample=(1, 1), bias=False):
@@ -243,10 +248,10 @@ def inception_v4_model(img_rows, img_cols, color_type=1, num_classeses=None, dro
 
     if K.image_dim_ordering() == 'th':
       # Use pre-trained weights for Theano backend
-      weights_path = 'imagenet_models/inception-v4_weights_th_dim_ordering_th_kernels.h5'
+      weights_path = 'inception_models/inception-v4_weights_th_dim_ordering_th_kernels.h5'
     else:
       # Use pre-trained weights for Tensorflow backend
-      weights_path = 'imagenet_models/inception-v4_weights_tf_dim_ordering_tf_kernels.h5'
+      weights_path = 'inception_models/inception-v4_weights_tf_dim_ordering_tf_kernels.h5'
 
     model.load_weights(weights_path, by_name=True)
 

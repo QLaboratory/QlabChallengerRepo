@@ -17,7 +17,7 @@ from sklearn.metrics import log_loss
 from scale_layer import Scale
 from load_scene import load_scene_data
 
-SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/imagenet_models"
+SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/densenet_models"
 
 def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.5, dropout_rate=0.0, weight_decay=1e-4, num_classes=None):
     '''
@@ -93,10 +93,10 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
 
     if K.image_dim_ordering() == 'th':
       # Use pre-trained weights for Theano backend
-      weights_path = 'imagenet_models/densenet161_weights_th.h5'
+      weights_path = 'densenet_models/densenet161_weights_th.h5'
     else:
       # Use pre-trained weights for Tensorflow backend
-      weights_path = 'imagenet_models/densenet161_weights_tf.h5'
+      weights_path = 'densenet_models/densenet161_weights_tf.h5'
 
     model.load_weights(weights_path, by_name=True)
 

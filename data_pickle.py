@@ -4,14 +4,14 @@ from PIL import Image
 import numpy as np
 import json
 
-IMAGE_SIZE = 224
+IMAGE_SIZE = 299
 # DIR = "C:\\Users\\Air\\Desktop\\pickle_test\\dataset"
 # ANNOTATION_FILE = "./train_annotations.json"
 # ANNOTATION_DICT_FILE = "./train_dict_annotations.json"
-DIR = "/home/yan/Desktop/QlabChallengerRepo/dataset/scene_train_images_20170904_direct_resize"
+DIR = "/home/yan/Desktop/QlabChallengerRepo/dataset_299/scene_train_images_20170904_content_resize"
 ANNOTATION_FILE = "./scene_train_annotations_20170904.json"
 ANNOTATION_DICT_FILE = "./scene_train_annotations_dict_20170904.json"
-OUTPUT_FILE = "ai_challenger_scene_train_direct_resize"
+OUTPUT_FILE = "ai_challenger_scene_train_content_resize"
 
 
 def ConvertImgToArray(filename):
@@ -48,7 +48,6 @@ def GetJpgList(p):
                 jpg_list.append(i)
     return jpg_list
 
-
 if os.path.exists(DIR):
     files = GetJpgList(DIR)
 else:
@@ -82,7 +81,7 @@ final_res = {b'data': data_matrix, b'labels': data_labels}
 # Write to the file
 f = open(OUTPUT_FILE, 'wb')
 
-pickle.dump(final_res, f,protocol=4)  # dump the object to a file
+pickle.dump(p, f,protocol=4)  # dump the object to a file
 f.close()
 
 del final_res
