@@ -9,9 +9,7 @@ from keras.utils import np_utils
 
 
 
-# DATA_URL_SCENE_TRAIN = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_train_direct_resize"
-# DATA_URL_SCENE_VALIDATION = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_validation_direct_resize"
-# DATA_URL_SCENE_TEST = "D:\\QlabChallengerRepo\\dataset\\ai_challenger_scene_test"
+IMAGE_SIZE = 299
 DATA_URL_SCENE_TRAIN = "/home/yan/Desktop/QlabChallengerRepo/dataset/ai_challenger_scene_train_direct_resize"
 DATA_URL_SCENE_VALIDATION = "/home/yan/Desktop/QlabChallengerRepo/dataset/ai_challenger_scene_validation_direct_resize"
 DATA_URL_SCENE_TEST = "/home/yan/Desktop/QlabChallengerRepo/dataset/ai_challenger_scene_test"
@@ -21,7 +19,7 @@ nb_valid_samples = 7120 # 100 validation samples
 num_classes = 80
 
 
-def load_batch(fpath, label_key='labels'):
+def load_batch(fpath):
     """Internal utility for parsing AI Challenger Scene data.
 
     # Arguments
@@ -32,21 +30,12 @@ def load_batch(fpath, label_key='labels'):
     # Returns
         A tuple `(data, labels)`.
     """
-    f = open(fpath, 'rb')
-    if sys.version_info < (3,):
-        d = pickle.load(f)
-    else:
-        d = pickle.load(f, encoding='bytes')
-        # decode utf8
-        d_decoded = {}
-        for k, v in d.items():
-            d_decoded[k.decode('utf8')] = v
-        d = d_decoded
-    f.close()
-    data = d['data']
-    labels = d[label_key]
+    d = np.load(fpath)    
+	
+    data = d['arr_0']
+    labels = d['arr_1']
 
-    data = data.reshape(data.shape[0], 3, 224, 224)
+    data = data.reshape(data.shape[0], 3, IMAGE_SIZE, IMAGE_SIZE)
     return data, labels
 
 
@@ -57,7 +46,7 @@ def load_data():
         Tuple of Numpy arrays: `(x_train, y_train), (x_test, y_test)`.
     """
 
-    x_train = np.zeros((nb_train_samples, 3, 224, 224), dtype='uint8')
+    x_train = np.zeros((nb_train_samples, 3, IMAGE_SIZE, IMAGE_SIZE), dtype='uint8')
     y_train = np.zeros((nb_train_samples,), dtype='uint8')
 
     x_train, y_train = load_batch(DATA_URL_SCENE_TRAIN)

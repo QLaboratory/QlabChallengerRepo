@@ -102,9 +102,8 @@ ENV/
 
 .idea/
 .vscode/
-dataset/
-ai_challenger_scene/densenet_models/
-dataset_224/
-dataset_299/
-ai_challenger_scene/inception_models/
-ai_challenger_scene/resnet_models/
+
+*.json
+*.jpg
+*.npz
+*.h5
