@@ -181,7 +181,7 @@ def inception_v4_base(input):
 
     # 35 x 35 x 384
     # 4 x Inception-A blocks
-    for idx in xrange(4):
+    for idx in range(4):
       net = block_inception_a(net)
 
     # 35 x 35 x 384
@@ -190,7 +190,7 @@ def inception_v4_base(input):
 
     # 17 x 17 x 1024
     # 7 x Inception-B blocks
-    for idx in xrange(7):
+    for idx in range(7):
       net = block_inception_b(net)
 
     # 17 x 17 x 1024
@@ -199,7 +199,7 @@ def inception_v4_base(input):
 
     # 8 x 8 x 1536
     # 3 x Inception-C blocks
-    for idx in xrange(3):
+    for idx in range(3):
       net = block_inception_c(net)
 
     return net
@@ -277,12 +277,12 @@ if __name__ == '__main__':
 
     img_rows, img_cols = 299, 299 # Resolution of inputs
     channel = 3
-    num_classes = 10 
-    batch_size = 16 
-    nb_epoch = 10
+    num_classes = 80 
+    batch_size = 8 
+    nb_epoch = 1
 
     # Load Cifar10 data. Please implement your own load_data() module for your own dataset
-    X_train, Y_train, X_valid, Y_valid = load_cifar10_data(img_rows, img_cols)
+    X_train, Y_train, X_valid, Y_valid = load_scene_data(img_rows, img_cols)
 
     # Load our model
     model = inception_v4_model(img_rows, img_cols, channel, num_classes, dropout_keep_prob=0.2)
@@ -296,8 +296,13 @@ if __name__ == '__main__':
               validation_data=(X_valid, Y_valid),
               )
 
+    CURRENT_TIME = "MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
+    CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
+    model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
+
     # Make predictions
     predictions_valid = model.predict(X_valid, batch_size=batch_size, verbose=1)
 
     # Cross-entropy loss score
     score = log_loss(Y_valid, predictions_valid)
+    gc.collect()
