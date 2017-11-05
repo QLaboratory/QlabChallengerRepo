@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
+import sys
+import cv2
+import numpy as np
 from datetime import datetime
 
 from keras.optimizers import SGD
@@ -10,14 +13,73 @@ from keras.layers.pooling import AveragePooling2D, GlobalAveragePooling2D, MaxPo
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 import keras.backend as K
+from keras.utils import np_utils
+from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 import gc
-
 
 from sklearn.metrics import log_loss
 from scale_layer import Scale
-from load_scene import load_scene_data
 
+
+IMAGE_SIZE = 224
 SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/densenet_models"
+DATA_URL_SCENE_TRAIN = "/home/yan/Desktop/QlabChallengerRepo/dataset_224/scene_train_cotent_resize.npz"
+DATA_URL_SCENE_VALIDATION = "/home/yan/Desktop/QlabChallengerRepo/dataset_224/scene_validation_content_resize.npz"
+
+nb_train_samples = 53879 # 53879 training samples
+nb_valid_samples = 7120 # 100 validation samples
+num_classes = 80 #num classes
+
+def load_batch(fpath):
+    """Internal utility for parsing AI Challenger Scene data.
+
+    # Arguments
+        fpath: path the file to parse.
+        label_key: key for label data in the retrieve
+            dictionary.
+
+    # Returns
+        A tuple `(data, labels)`.
+    """
+    d = np.load(fpath)    
+	
+    data = d['arr_0']
+    labels = d['arr_1']
+
+    data = data.reshape(data.shape[0], 3, IMAGE_SIZE, IMAGE_SIZE)
+    return data, labels
+
+
+def load_data():
+    """Loads AI Challenger Scene dataset.
+
+    # Returns
+        Tuple of Numpy arrays: `(x_train, y_train), (x_test, y_test)`.
+    """
+    x_train, y_train = load_batch(DATA_URL_SCENE_TRAIN)
+    x_valid, y_valid = load_batch(DATA_URL_SCENE_VALIDATION)
+
+    y_train = np.reshape(y_train, (len(y_train), 1))
+    y_valid = np.reshape(y_valid, (len(y_valid), 1))
+
+    if K.image_data_format() == 'channels_last':
+        x_train = x_train.transpose(0, 2, 3, 1)
+        x_valid = x_valid.transpose(0, 2, 3, 1)
+
+    return (x_train, y_train), (x_valid, y_valid)
+
+
+def load_scene_data(img_rows, img_cols):
+
+    # Load ai_challenger_sence training and validation sets
+    (X_train, Y_train), (X_valid, Y_valid) = load_data()
+
+    # Transform targets to keras compatible format
+    Y_train = np_utils.to_categorical(Y_train[:nb_train_samples], num_classes)
+    Y_valid = np_utils.to_categorical(Y_valid[:nb_valid_samples], num_classes)
+
+    return X_train, Y_train, X_valid, Y_valid
+
 
 def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.5, dropout_rate=0.0, weight_decay=1e-4, num_classes=None):
     '''
@@ -106,7 +168,7 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
     else:
       # Use pre-trained weights for Tensorflow backend
       # weights_path = 'imagenet_models/densenet161_weights_tf.h5'
-      weights_path = 'densenet_models/MODEL_WEIGHTS_2017_10_28_19_14_37.h5'
+      weights_path = 'densenet_models/MODEL_WEIGHTS_2017_11_01_14_51_56.h5'
     model.load_weights(weights_path, by_name=True)
 
     # Learning rate is changed to 0.001
@@ -211,19 +273,27 @@ def dense_block(x, stage, nb_layers, nb_filter, growth_rate, dropout_rate=None, 
 
 if __name__ == '__main__':
 
-    # Example to fine-tune on 3000 samples from Cifar10
-
     img_rows, img_cols = 224, 224 # Resolution of inputs
     channel = 3
     num_classes = 80
-    batch_size = 8
+    batch_size = 1
     nb_epoch = 5
 
     # Load Scene data. Please implement your own load_data() module for your own dataset
     X_train, Y_train, X_valid, Y_valid = load_scene_data(img_rows, img_cols)
 
     # Load our model
-    model = densenet161_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes)
+    model = densenet161_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes,dropout_rate=0.2)
+
+    # data arguement
+    datagen = ImageDataGenerator(
+                rotation_range=10,
+                width_shift_range=0.1,
+                height_shift_range=0.1,
+                shear_range=0.2,
+                zoom_range=0.2,
+                horizontal_flip=True,
+                fill_mode='nearest')
 
     # Start Fine-tuning
     model.fit(X_train, Y_train,
@@ -231,10 +301,16 @@ if __name__ == '__main__':
               epochs=nb_epoch,
               shuffle=True,
               verbose=1,
-              validation_data=(X_valid, Y_valid),
-              )
+              validation_data=(X_valid, Y_valid))
 
-    CURRENT_TIME = "MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
+    #model.fit_generator(datagen.flow(X_train,Y_train,batch_size=batch_size),
+            #   steps_per_epoch=len(X_train),epochs=nb_epoch,
+            #   shuffle=True,
+            #   verbose=1,
+            #   validation_data=(X_valid,Y_valid),
+            #   use_multiprocessing=True)
+
+    CURRENT_TIME = "DENSENET_MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
     CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
     model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
 
