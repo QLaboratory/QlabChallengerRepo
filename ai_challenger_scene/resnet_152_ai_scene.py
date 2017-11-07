@@ -21,65 +21,7 @@ from scale_layer import Scale
 import sys
 sys.setrecursionlimit(3000)
 
-IMAGE_SIZE = 224
 SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/resnet_models"
-DATA_URL_SCENE_TRAIN = "/home/yan/Desktop/QlabChallengerRepo/dataset_224/scene_train_cotent_resize.npz"
-DATA_URL_SCENE_VALIDATION = "/home/yan/Desktop/QlabChallengerRepo/dataset_224/scene_validation_content_resize.npz"
-
-nb_train_samples = 53879 # 53879 training samples
-nb_valid_samples = 7120 # 100 validation samples
-num_classes = 80 #num classes
-
-def load_batch(fpath):
-    """Internal utility for parsing AI Challenger Scene data.
-
-    # Arguments
-        fpath: path the file to parse.
-        label_key: key for label data in the retrieve
-            dictionary.
-
-    # Returns
-        A tuple `(data, labels)`.
-    """
-    d = np.load(fpath)    
-	
-    data = d['arr_0']
-    labels = d['arr_1']
-
-    data = data.reshape(data.shape[0], 3, IMAGE_SIZE, IMAGE_SIZE)
-    return data, labels
-
-
-def load_data():
-    """Loads AI Challenger Scene dataset.
-
-    # Returns
-        Tuple of Numpy arrays: `(x_train, y_train), (x_test, y_test)`.
-    """
-    x_train, y_train = load_batch(DATA_URL_SCENE_TRAIN)
-    x_valid, y_valid = load_batch(DATA_URL_SCENE_VALIDATION)
-
-    y_train = np.reshape(y_train, (len(y_train), 1))
-    y_valid = np.reshape(y_valid, (len(y_valid), 1))
-
-    if K.image_data_format() == 'channels_last':
-        x_train = x_train.transpose(0, 2, 3, 1)
-        x_valid = x_valid.transpose(0, 2, 3, 1)
-
-    return (x_train, y_train), (x_valid, y_valid)
-
-
-def load_scene_data(img_rows, img_cols):
-
-    # Load ai_challenger_sence training and validation sets
-    (X_train, Y_train), (X_valid, Y_valid) = load_data()
-
-    # Transform targets to keras compatible format
-    Y_train = np_utils.to_categorical(Y_train[:nb_train_samples], num_classes)
-    Y_valid = np_utils.to_categorical(Y_valid[:nb_valid_samples], num_classes)
-
-    return X_train, Y_train, X_valid, Y_valid
-
 
 def identity_block(input_tensor, kernel_size, filters, stage, block):
     '''The identity_block is the block that has no conv layer at shortcut
@@ -225,7 +167,7 @@ def resnet152_model(img_rows, img_cols, color_type=1, num_classes=None):
       weights_path = 'resnet_models/resnet152_weights_th.h5'
     else:
       # Use pre-trained weights for Tensorflow backend
-      weights_path = 'resnet_models/MODEL_WEIGHTS_2017_11_02_10_03_30.h5'
+      weights_path = 'resnet_models/RESNET_MODEL_WEIGHTS_2017_11_07_21_48_02.h5'
 
     model.load_weights(weights_path, by_name=True)
 
@@ -245,15 +187,19 @@ if __name__ == '__main__':
     num_classes = 80
     batch_size = 8
     nb_epoch = 10
-
-    # Load Cifar10 data. Please implement your own load_data() module for your own dataset
-    X_train, Y_train, X_valid, Y_valid = load_scene_data(img_rows, img_cols)
+    nb_train_samples = 53880
+    nb_validation_samples = 7120
 
     # Load our model
     model = resnet152_model(img_rows, img_cols, channel, num_classes)
 
-    # data arguement
-    datagen = ImageDataGenerator(
+    #classes
+    our_class = []
+    for i in range(num_classes):
+        our_class.append(str(i))
+
+   # data arguement
+    train_datagen = ImageDataGenerator(
                 rotation_range=10,
                 width_shift_range=0.1,
                 height_shift_range=0.1,
@@ -261,21 +207,31 @@ if __name__ == '__main__':
                 zoom_range=0.2,
                 horizontal_flip=True,
                 fill_mode='nearest')
+    test_datagen = ImageDataGenerator()
+
+    train_generator = train_datagen.flow_from_directory(
+                '/home/yan/Desktop/QlabChallengerRepo/dataset_224/data/train/',
+                target_size=(img_rows,img_cols),
+                batch_size=batch_size,
+                classes=our_class)
+    validation_generator = test_datagen.flow_from_directory(
+                '/home/yan/Desktop/QlabChallengerRepo/dataset_224/data/valid/',
+                target_size=(img_rows,img_cols),
+                batch_size=batch_size,
+                classes=our_class)
 
     # Start Fine-tuning
-    model.fit_generator(datagen.flow(X_train,Y_train,batch_size=batch_size),
-              steps_per_epoch=len(X_train),epochs=nv_epoch,
-              shuffle=Trie,
+    model.fit_generator(train_generator,
+              steps_per_epoch=nb_train_samples//batch_size,
+              epochs=nb_epoch,
+              shuffle=True,
               verbose=1,
-              validation_data=(X_valid,Y_valid))
+              validation_data=validation_generator,
+              validation_steps=nb_validation_samples//batch_size)
 
     #save modeles
     CURRENT_TIME = "RESNET_MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
     CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
     model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
 
-    # Make predictions
-    predictions_valid = model.predict(X_valid, batch_size=batch_size, verbose=1)
-
-    # Cross-entropy loss score
-    score = log_loss(Y_valid, predictions_valid)
+    gc.collect()

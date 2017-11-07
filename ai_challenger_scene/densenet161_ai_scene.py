@@ -112,7 +112,7 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
     else:
       # Use pre-trained weights for Tensorflow backend
       # weights_path = 'imagenet_models/densenet161_weights_tf.h5'
-      weights_path = 'densenet_models/DENSENET_MODEL_WEIGHTS_2017_11_06_12_34_09.h5'
+      weights_path = 'densenet_models/DENSENET_MODEL_WEIGHTS_2017_11_07_15_34_48.h5'
     model.load_weights(weights_path, by_name=True)
 
     # Learning rate is changed to 0.001
@@ -226,7 +226,7 @@ if __name__ == '__main__':
     nb_validation_samples = 7120
 
     # Load our model
-    model = densenet161_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes,dropout_rate=0.2)
+    model = densenet161_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes,dropout_rate=0.25)
 
     #classes
     our_class = []
@@ -235,9 +235,9 @@ if __name__ == '__main__':
 
     # data arguement
     train_datagen = ImageDataGenerator(
-                rotation_range=10,
-                width_shift_range=0.1,
-                height_shift_range=0.1,
+                rotation_range=20,
+                width_shift_range=0.2,
+                height_shift_range=0.2,
                 shear_range=0.2,
                 zoom_range=0.2,
                 horizontal_flip=True,
@@ -254,8 +254,9 @@ if __name__ == '__main__':
                 target_size=(img_rows,img_cols),
                 batch_size=batch_size,
                 classes=our_class)
-    print(train_generator.class_indices)
-    print(validation_generator.class_indices)
+    #print(train_generator.class_indices)
+    #print(validation_generator.class_indices)
+    
     # Start Fine-tuning
     model.fit_generator(train_generator,
               steps_per_epoch=nb_train_samples//batch_size,
