@@ -4,9 +4,9 @@ import numpy as np
 import json
 import shutil
 
-INPUT_DIR = "/home/yan/Desktop/QlabChallengerRepo/dataset_224/scene_train_cotent_resize/scene_train_images_20170904_content_resize/"
-ANNOTATION_FILE = "./scene_train_annotations_20170904.json"
-OUTPUT_DIR = "/home/yan/Desktop/QlabChallengerRepo/dataset_224/data/train/"
+INPUT_DIR = "/home/yan/Desktop/QlabChallengerRepo/dataset_299/scene_validation_content_resize/"
+ANNOTATION_FILE = "./scene_validation_annotations_20170908.json"
+OUTPUT_DIR = "/home/yan/Desktop/QlabChallengerRepo/dataset_299/data/valid/"
 
 def GetJpgList(p):
     if p == "":

@@ -167,13 +167,13 @@ def resnet152_model(img_rows, img_cols, color_type=1, num_classes=None):
       weights_path = 'resnet_models/resnet152_weights_th.h5'
     else:
       # Use pre-trained weights for Tensorflow backend
-      weights_path = 'resnet_models/RESNET_MODEL_WEIGHTS_2017_11_07_21_48_02.h5'
+      weights_path = 'resnet_models/RESNET_MODEL_WEIGHTS_2017_11_08_17_52_08.h5'
 
     model.load_weights(weights_path, by_name=True)
 
 
     # Learning rate is changed to 0.001
-    sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
+    sgd = SGD(lr=1e-5, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 
     return model
@@ -186,7 +186,7 @@ if __name__ == '__main__':
     channel = 3
     num_classes = 80
     batch_size = 8
-    nb_epoch = 10
+    nb_epoch = 2
     nb_train_samples = 53880
     nb_validation_samples = 7120
 
@@ -200,9 +200,9 @@ if __name__ == '__main__':
 
    # data arguement
     train_datagen = ImageDataGenerator(
-                rotation_range=10,
-                width_shift_range=0.1,
-                height_shift_range=0.1,
+                rotation_range=20,
+                width_shift_range=0.2,
+                height_shift_range=0.2,
                 shear_range=0.2,
                 zoom_range=0.2,
                 horizontal_flip=True,
