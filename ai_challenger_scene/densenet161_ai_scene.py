@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
+import sys
+import cv2
+import numpy as np
 from datetime import datetime
 
 from keras.optimizers import SGD
@@ -10,14 +13,17 @@ from keras.layers.pooling import AveragePooling2D, GlobalAveragePooling2D, MaxPo
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 import keras.backend as K
+from keras.utils import np_utils
+from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 import gc
-
 
 from sklearn.metrics import log_loss
 from scale_layer import Scale
-from load_scene import load_scene_data
+
 
 SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/densenet_models"
+
+
 
 def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.5, dropout_rate=0.0, weight_decay=1e-4, num_classes=None):
     '''
@@ -106,7 +112,7 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
     else:
       # Use pre-trained weights for Tensorflow backend
       # weights_path = 'imagenet_models/densenet161_weights_tf.h5'
-      weights_path = 'densenet_models/MODEL_WEIGHTS_2017_10_28_19_14_37.h5'
+      weights_path = 'densenet_models/DENSENET_MODEL_WEIGHTS_2017_11_07_15_34_48.h5'
     model.load_weights(weights_path, by_name=True)
 
     # Learning rate is changed to 0.001
@@ -211,38 +217,57 @@ def dense_block(x, stage, nb_layers, nb_filter, growth_rate, dropout_rate=None, 
 
 if __name__ == '__main__':
 
-    # Example to fine-tune on 3000 samples from Cifar10
-
     img_rows, img_cols = 224, 224 # Resolution of inputs
     channel = 3
     num_classes = 80
     batch_size = 8
     nb_epoch = 5
-
-    # Load Scene data. Please implement your own load_data() module for your own dataset
-    X_train, Y_train, X_valid, Y_valid = load_scene_data(img_rows, img_cols)
+    nb_train_samples = 53880
+    nb_validation_samples = 7120
 
     # Load our model
-    model = densenet161_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes)
+    model = densenet161_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes,dropout_rate=0.25)
 
+    #classes
+    our_class = []
+    for i in range(num_classes):
+        our_class.append(str(i))
+
+    # data arguement
+    train_datagen = ImageDataGenerator(
+                rotation_range=20,
+                width_shift_range=0.2,
+                height_shift_range=0.2,
+                shear_range=0.2,
+                zoom_range=0.2,
+                horizontal_flip=True,
+                fill_mode='nearest')
+    test_datagen = ImageDataGenerator()
+
+    train_generator = train_datagen.flow_from_directory(
+                '/home/yan/Desktop/QlabChallengerRepo/dataset_224/data/train/',
+                target_size=(img_rows,img_cols),
+                batch_size=batch_size,
+                classes=our_class)
+    validation_generator = test_datagen.flow_from_directory(
+                '/home/yan/Desktop/QlabChallengerRepo/dataset_224/data/valid/',
+                target_size=(img_rows,img_cols),
+                batch_size=batch_size,
+                classes=our_class)
+    #print(train_generator.class_indices)
+    #print(validation_generator.class_indices)
+    
     # Start Fine-tuning
-    model.fit(X_train, Y_train,
-              batch_size=batch_size,
+    model.fit_generator(train_generator,
+              steps_per_epoch=nb_train_samples//batch_size,
               epochs=nb_epoch,
               shuffle=True,
               verbose=1,
-              validation_data=(X_valid, Y_valid),
-              )
+              validation_data=validation_generator,
+              validation_steps=nb_validation_samples//batch_size)
 
-    CURRENT_TIME = "MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
+    CURRENT_TIME = "DENSENET_MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
     CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
     model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
-
-    # Make predictions
-    predictions_valid = model.predict(X_valid, batch_size=batch_size, verbose=1)
-
-    # Cross-entropy loss score
-    score = log_loss(Y_valid, predictions_valid)
-    print("score:",score)
 
     gc.collect()

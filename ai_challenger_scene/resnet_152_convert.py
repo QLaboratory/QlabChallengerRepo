@@ -1,18 +1,12 @@
 # -*- coding: utf-8 -*-
 import os
-import sys
-import cv2
-import numpy as np
 from datetime import datetime
-
 from keras.models import Sequential
 from keras.optimizers import SGD
 from keras.layers import Input, Dense, Convolution2D, MaxPooling2D, AveragePooling2D, ZeroPadding2D, Dropout, Flatten, merge, Reshape, Activation
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 from keras import backend as K
-from keras.utils import np_utils
-from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 import gc
 
 from sklearn.metrics import log_loss
@@ -151,14 +145,11 @@ def resnet152_model(img_rows, img_cols, color_type=1, num_classes=None):
     x = identity_block(x, 3, [512, 512, 2048], stage=5, block='b')
     x = identity_block(x, 3, [512, 512, 2048], stage=5, block='c')
 
-    # Truncate and replace softmax layer for transfer learning
-    # Cannot use model.layers.pop() since model is not of Sequential() type
-    # The method below works since pre-trained weights are stored in layers but not in the model
-    x_newfc = AveragePooling2D((7, 7), name='avg_pool')(x)
-    x_newfc = Flatten()(x_newfc)
-    x_newfc = Dense(num_classes, activation='softmax', name='fc8')(x_newfc)
+    x_fc = AveragePooling2D((7, 7), name='avg_pool')(x)
+    x_fc = Flatten()(x_fc)
+    x_fc = Dense(1000, activation='softmax', name='fc1000')(x_fc)
 
-    model = Model(img_input, x_newfc)
+    model = Model(img_input, x_fc)
 
     gc.collect()
 
@@ -167,10 +158,18 @@ def resnet152_model(img_rows, img_cols, color_type=1, num_classes=None):
       weights_path = 'resnet_models/resnet152_weights_th.h5'
     else:
       # Use pre-trained weights for Tensorflow backend
-      weights_path = 'resnet_models/RESNET_MODEL_WEIGHTS_2017_11_07_21_48_02.h5'
+      weights_path = 'resnet_models/resnet152_weights_tf.h5'
 
     model.load_weights(weights_path, by_name=True)
 
+    # Truncate and replace softmax layer for transfer learning
+    # Cannot use model.layers.pop() since model is not of Sequential() type
+    # The method below works since pre-trained weights are stored in layers but not in the model
+    x_newfc = AveragePooling2D((7, 7), name='avg_pool')(x)
+    x_newfc = Flatten()(x_newfc)
+    x_newfc = Dense(num_classes, activation='softmax', name='fc8')(x_newfc)
+
+    model = Model(img_input, x_newfc)
 
     # Learning rate is changed to 0.001
     sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
@@ -185,53 +184,12 @@ if __name__ == '__main__':
     img_rows, img_cols = 224, 224 # Resolution of inputs
     channel = 3
     num_classes = 80
-    batch_size = 8
-    nb_epoch = 10
-    nb_train_samples = 53880
-    nb_validation_samples = 7120
 
     # Load our model
     model = resnet152_model(img_rows, img_cols, channel, num_classes)
-
-    #classes
-    our_class = []
-    for i in range(num_classes):
-        our_class.append(str(i))
-
-   # data arguement
-    train_datagen = ImageDataGenerator(
-                rotation_range=10,
-                width_shift_range=0.1,
-                height_shift_range=0.1,
-                shear_range=0.2,
-                zoom_range=0.2,
-                horizontal_flip=True,
-                fill_mode='nearest')
-    test_datagen = ImageDataGenerator()
-
-    train_generator = train_datagen.flow_from_directory(
-                '/home/yan/Desktop/QlabChallengerRepo/dataset_224/data/train/',
-                target_size=(img_rows,img_cols),
-                batch_size=batch_size,
-                classes=our_class)
-    validation_generator = test_datagen.flow_from_directory(
-                '/home/yan/Desktop/QlabChallengerRepo/dataset_224/data/valid/',
-                target_size=(img_rows,img_cols),
-                batch_size=batch_size,
-                classes=our_class)
-
-    # Start Fine-tuning
-    model.fit_generator(train_generator,
-              steps_per_epoch=nb_train_samples//batch_size,
-              epochs=nb_epoch,
-              shuffle=True,
-              verbose=1,
-              validation_data=validation_generator,
-              validation_steps=nb_validation_samples//batch_size)
 
     #save modeles
     CURRENT_TIME = "RESNET_MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
     CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
     model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
 
-    gc.collect()
