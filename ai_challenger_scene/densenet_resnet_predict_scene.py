@@ -17,9 +17,12 @@ import keras.backend as K
 
 from scale_layer import Scale
 
-SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/predict_loaded_models"
+# 此处指定预测集的文件路径
+# 在第101行和344行附近修改各自网络权重的加载文件
+# SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/predict_loaded_models"
 SCENE_TEST_DATA_FOLDER_PATH = "/home/yan/Desktop/QlabChallengerRepo/scene_test_a_images_20170922_direct_resize_224_224"
-
+DENSENET161_MODEL_SAVE_PATH = 'densenet_models/DENSENET_MODEL_WEIGHTS_2017_11_09_20_49_12.h5'
+RESNET_MODEL_SAVE_PATH = 'resnet_models/RESNET_MODEL_WEIGHTS_2017_11_08_20_54_01.h5'
 
 def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.5, dropout_rate=0.0, weight_decay=1e-4, num_classes=None):
     '''
@@ -96,7 +99,7 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
 
     model = Model(img_input, x_newfc)
 
-    model.load_weights('densenet_models/DENSENET_MODEL_WEIGHTS_2017_11_09_20_49_12.h5', by_name=True)
+    model.load_weights(DENSENET161_MODEL_SAVE_PATH, by_name=True)
 
     # Learning rate is changed to 0.001
     sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
@@ -339,8 +342,7 @@ def resnet152_model(img_rows, img_cols, color_type=1, num_classes=None):
 
     gc.collect()
 
-
-    model.load_weights('resnet_models/RESNET_MODEL_WEIGHTS_2017_11_08_20_54_01.h5', by_name=True)
+    model.load_weights(RESNET_MODEL_SAVE_PATH, by_name=True)
 
     # Learning rate is changed to 0.001
     sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
@@ -400,25 +402,48 @@ if __name__ == '__main__':
     # predict_annotation_dic_temp['label_id'] = [2, 3, 4]
     # predict_json.append(predict_annotation_dic_temp)
 
-    for i in test_data_files:
-        im = Image.open(os.path.join(SCENE_TEST_DATA_FOLDER_PATH, i))
-        im_array = np.array(im).reshape(1, img_rows, img_cols, channel)
+    resultOutputType = 'all'
 
-        densenet_predictions_valid = densenet_model.predict(im_array, verbose=0)
-        resnet_predictions_valid = resnet_model.predict(im_array, verbose=0)
-        predictions_valid = np.add(densenet_predictions_valid, resnet_predictions_valid)
-        predictions_valid = np.true_divide(predictions_valid, 2.0)
+    if (resultOutputType == 'top3'):
+        for i in test_data_files:
+            im = Image.open(os.path.join(SCENE_TEST_DATA_FOLDER_PATH, i))
+            im_array = np.array(im).reshape(1, img_rows, img_cols, channel)
 
-        predict_annotation_dic_temp = {}
-        predict_annotation_dic_temp['image_id'] = i
-        predict_label_id = predictions_valid[0].argsort()[-3:][::-1]
-        predict_annotation_dic_temp['label_id'] = predict_label_id.tolist()
-        if (count % 100 == 0):
-            print(str(count) + "/" + totalnum)
-        # print(predict_annotation_dic_temp)
-        # print(predict_label_id)
-        count += 1
-        predict_json.append(predict_annotation_dic_temp)
+            densenet_predictions_valid = densenet_model.predict(im_array, verbose=0)
+            resnet_predictions_valid = resnet_model.predict(im_array, verbose=0)
+            predictions_valid = np.add(densenet_predictions_valid, resnet_predictions_valid)
+            predictions_valid = np.true_divide(predictions_valid, 2.0)
+
+            predict_annotation_dic_temp = {}
+            predict_annotation_dic_temp['image_id'] = i
+            predict_label_id = predictions_valid[0].argsort()[-3:][::-1]
+            predict_annotation_dic_temp['label_id'] = predict_label_id.tolist()
+            if (count % 100 == 0):
+                print(str(count) + "/" + totalnum)
+            # print(predict_annotation_dic_temp)
+            # print(predict_label_id)
+            count += 1
+            predict_json.append(predict_annotation_dic_temp)
+    elif (resultOutputType == 'all'):
+        for i in test_data_files:
+            im = Image.open(os.path.join(SCENE_TEST_DATA_FOLDER_PATH, i))
+            im_array = np.array(im).reshape(1, img_rows, img_cols, channel)
+
+            densenet_predictions_valid = densenet_model.predict(im_array, verbose=0)
+            resnet_predictions_valid = resnet_model.predict(im_array, verbose=0)
+            predictions_valid = np.add(densenet_predictions_valid, resnet_predictions_valid)
+            predictions_valid = np.true_divide(predictions_valid, 2.0)
+
+            predict_annotation_dic_temp = {}
+            predict_annotation_dic_temp['image_id'] = i
+            predict_label_id = predictions_valid[0]
+            predict_annotation_dic_temp['label_id'] = predict_label_id.tolist()
+            if (count % 100 == 0):
+                print(str(count) + "/" + totalnum)
+            # print(predict_annotation_dic_temp)
+            # print(predict_label_id)
+            count += 1
+            predict_json.append(predict_annotation_dic_temp)
 
     predict_json_file_name = "predict_result_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".json"
     predict_json_file_path = open(predict_json_file_name, "w")
