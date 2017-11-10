@@ -112,11 +112,11 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
     else:
       # Use pre-trained weights for Tensorflow backend
       # weights_path = 'imagenet_models/densenet161_weights_tf.h5'
-      weights_path = 'densenet_models/DENSENET_MODEL_WEIGHTS_2017_11_07_15_34_48.h5'
+      weights_path = 'densenet_models/DENSENET_MODEL_WEIGHTS_2017_11_09_20_49_12.h5'
     model.load_weights(weights_path, by_name=True)
 
     # Learning rate is changed to 0.001
-    sgd = SGD(lr=5e-4, decay=1e-6, momentum=0.9, nesterov=True)
+    sgd = SGD(lr=1e-6, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 
     return model
@@ -221,12 +221,12 @@ if __name__ == '__main__':
     channel = 3
     num_classes = 80
     batch_size = 8
-    nb_epoch = 5
+    nb_epoch = 2
     nb_train_samples = 53880
     nb_validation_samples = 7120
 
     # Load our model
-    model = densenet161_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes,dropout_rate=0.25)
+    model = densenet161_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes,dropout_rate=0.2)
 
     #classes
     our_class = []

@@ -189,7 +189,7 @@ if __name__ == '__main__':
     model = resnet152_model(img_rows, img_cols, channel, num_classes)
 
     #save modeles
-    CURRENT_TIME = "RESNET_MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
+    CURRENT_TIME = "RESNET_50_MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
     CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
     model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
 

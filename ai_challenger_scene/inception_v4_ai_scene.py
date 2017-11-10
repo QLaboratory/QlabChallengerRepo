@@ -254,7 +254,7 @@ def inception_v4_model(img_rows, img_cols, color_type=1, num_classeses=None, dro
       weights_path = 'imagenet_models/inception-v4_weights_th_dim_ordering_th_kernels.h5'
     else:
       # Use pre-trained weights for Tensorflow backend
-      weights_path = 'inception_models/INCEPTIONV4_MODEL_WEIGHTS_2017_11_08_21_05_33.h5'
+      weights_path = 'inception_models/INCEPTIONV4_MODEL_WEIGHTS_2017_11_09_06_57_06.h5'
 
     model.load_weights(weights_path, by_name=True)
 

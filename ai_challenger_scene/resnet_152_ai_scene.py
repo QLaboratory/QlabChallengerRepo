@@ -167,13 +167,13 @@ def resnet152_model(img_rows, img_cols, color_type=1, num_classes=None):
       weights_path = 'resnet_models/resnet152_weights_th.h5'
     else:
       # Use pre-trained weights for Tensorflow backend
-      weights_path = 'resnet_models/RESNET_MODEL_WEIGHTS_2017_11_08_17_52_08.h5'
+      weights_path = 'resnet_models/RESNET_MODEL_WEIGHTS_2017_11_08_20_54_01.h5'
 
     model.load_weights(weights_path, by_name=True)
 
 
     # Learning rate is changed to 0.001
-    sgd = SGD(lr=1e-5, decay=1e-6, momentum=0.9, nesterov=True)
+    sgd = SGD(lr=1e-6, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 
     return model
