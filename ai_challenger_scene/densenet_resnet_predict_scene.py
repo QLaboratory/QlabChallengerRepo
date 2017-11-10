@@ -6,18 +6,20 @@ from PIL import Image
 import json
 
 from keras.optimizers import SGD
-from keras.layers import Input, merge, ZeroPadding2D
+from keras.layers import Input, Dense, Convolution2D, MaxPooling2D, AveragePooling2D, ZeroPadding2D, Dropout, Flatten, merge, Reshape, Activation
 from keras.layers.core import Dense, Dropout, Activation
 from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import AveragePooling2D, GlobalAveragePooling2D, MaxPooling2D
 from keras.layers.normalization import BatchNormalization
-from keras.models import Model
+from keras.models import Model, Sequential
 import keras.backend as K
 
 from scale_layer import Scale
 
 # SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/imagenet_models"
 SCENE_MODEL_SAVE_PATH = "D:/QlabChallengerRepo/ai_challenger_scene/imagenet_models"
+
+
 SCENE_TEST_DATA_FOLDER_PATH = "D:/QlabChallengerRepo/dataset/scene_train_images_20170904_direct_resize_224_224"
 
 def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.5, dropout_rate=0.0, weight_decay=1e-4, num_classes=None):
@@ -95,7 +97,7 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
 
     model = Model(img_input, x_newfc)
 
-    weights_path = 'imagenet_models/MODEL_WEIGHTS_2017_10_28_19_14_37.h5'
+    weights_path = os.path.join(SCENE_MODEL_SAVE_PATH, "DENSENET_MODEL_WEIGHTS_2017_11_01_14_51_56.h5")
 
     model.load_weights(weights_path, by_name=True)
 
@@ -199,6 +201,158 @@ def dense_block(x, stage, nb_layers, nb_filter, growth_rate, dropout_rate=None, 
     return concat_feat, nb_filter
 
 
+def identity_block(input_tensor, kernel_size, filters, stage, block):
+    '''The identity_block is the block that has no conv layer at shortcut
+    # Arguments
+        input_tensor: input tensor
+        kernel_size: defualt 3, the kernel size of middle conv layer at main path
+        filters: list of integers, the nb_filters of 3 conv layer at main path
+        stage: integer, current stage label, used for generating layer names
+        block: 'a','b'..., current block label, used for generating layer names
+    '''
+    eps = 1.1e-5
+    nb_filter1, nb_filter2, nb_filter3 = filters
+    conv_name_base = 'res' + str(stage) + block + '_branch'
+    bn_name_base = 'bn' + str(stage) + block + '_branch'
+    scale_name_base = 'scale' + str(stage) + block + '_branch'
+
+    x = Convolution2D(nb_filter1, 1, 1, name=conv_name_base + '2a', bias=False)(input_tensor)
+    x = BatchNormalization(epsilon=eps, axis=bn_axis, name=bn_name_base + '2a')(x)
+    x = Scale(axis=bn_axis, name=scale_name_base + '2a')(x)
+    x = Activation('relu', name=conv_name_base + '2a_relu')(x)
+
+    x = ZeroPadding2D((1, 1), name=conv_name_base + '2b_zeropadding')(x)
+    x = Convolution2D(nb_filter2, kernel_size, kernel_size,
+                      name=conv_name_base + '2b', bias=False)(x)
+    x = BatchNormalization(epsilon=eps, axis=bn_axis, name=bn_name_base + '2b')(x)
+    x = Scale(axis=bn_axis, name=scale_name_base + '2b')(x)
+    x = Activation('relu', name=conv_name_base + '2b_relu')(x)
+
+    x = Convolution2D(nb_filter3, 1, 1, name=conv_name_base + '2c', bias=False)(x)
+    x = BatchNormalization(epsilon=eps, axis=bn_axis, name=bn_name_base + '2c')(x)
+    x = Scale(axis=bn_axis, name=scale_name_base + '2c')(x)
+
+    x = merge([x, input_tensor], mode='sum', name='res' + str(stage) + block)
+    x = Activation('relu', name='res' + str(stage) + block + '_relu')(x)
+    return x
+
+
+def resnet_conv_block(input_tensor, kernel_size, filters, stage, block, strides=(2, 2)):
+    '''resnet_conv_block is the block that has a conv layer at shortcut
+    # Arguments
+        input_tensor: input tensor
+        kernel_size: defualt 3, the kernel size of middle conv layer at main path
+        filters: list of integers, the nb_filters of 3 conv layer at main path
+        stage: integer, current stage label, used for generating layer names
+        block: 'a','b'..., current block label, used for generating layer names
+    Note that from stage 3, the first conv layer at main path is with subsample=(2,2)
+    And the shortcut should have subsample=(2,2) as well
+    '''
+    eps = 1.1e-5
+    nb_filter1, nb_filter2, nb_filter3 = filters
+    conv_name_base = 'res' + str(stage) + block + '_branch'
+    bn_name_base = 'bn' + str(stage) + block + '_branch'
+    scale_name_base = 'scale' + str(stage) + block + '_branch'
+
+    x = Convolution2D(nb_filter1, 1, 1, subsample=strides,
+                      name=conv_name_base + '2a', bias=False)(input_tensor)
+    x = BatchNormalization(epsilon=eps, axis=bn_axis, name=bn_name_base + '2a')(x)
+    x = Scale(axis=bn_axis, name=scale_name_base + '2a')(x)
+    x = Activation('relu', name=conv_name_base + '2a_relu')(x)
+
+    x = ZeroPadding2D((1, 1), name=conv_name_base + '2b_zeropadding')(x)
+    x = Convolution2D(nb_filter2, kernel_size, kernel_size,
+                      name=conv_name_base + '2b', bias=False)(x)
+    x = BatchNormalization(epsilon=eps, axis=bn_axis, name=bn_name_base + '2b')(x)
+    x = Scale(axis=bn_axis, name=scale_name_base + '2b')(x)
+    x = Activation('relu', name=conv_name_base + '2b_relu')(x)
+
+    x = Convolution2D(nb_filter3, 1, 1, name=conv_name_base + '2c', bias=False)(x)
+    x = BatchNormalization(epsilon=eps, axis=bn_axis, name=bn_name_base + '2c')(x)
+    x = Scale(axis=bn_axis, name=scale_name_base + '2c')(x)
+
+    shortcut = Convolution2D(nb_filter3, 1, 1, subsample=strides,
+                             name=conv_name_base + '1', bias=False)(input_tensor)
+    shortcut = BatchNormalization(epsilon=eps, axis=bn_axis, name=bn_name_base + '1')(shortcut)
+    shortcut = Scale(axis=bn_axis, name=scale_name_base + '1')(shortcut)
+
+    x = merge([x, shortcut], mode='sum', name='res' + str(stage) + block)
+    x = Activation('relu', name='res' + str(stage) + block + '_relu')(x)
+    return x
+
+
+def resnet152_model(img_rows, img_cols, color_type=1, num_classes=None):
+    """
+    Resnet 152 Model for Keras
+
+    Model Schema and layer naming follow that of the original Caffe implementation
+    https://github.com/KaimingHe/deep-residual-networks
+
+    ImageNet Pretrained Weights 
+    Theano: https://drive.google.com/file/d/0Byy2AcGyEVxfZHhUT3lWVWxRN28/view?usp=sharing
+    TensorFlow: https://drive.google.com/file/d/0Byy2AcGyEVxfeXExMzNNOHpEODg/view?usp=sharing
+
+    Parameters:
+      img_rows, img_cols - resolution of inputs
+      channel - 1 for grayscale, 3 for color 
+      num_classes - number of class labels for our classification task
+    """
+    eps = 1.1e-5
+
+    # Handle Dimension Ordering for different backends
+    global bn_axis
+    if K.image_dim_ordering() == 'tf':
+      bn_axis = 3
+      img_input = Input(shape=(img_rows, img_cols, color_type), name='data')
+    else:
+      bn_axis = 1
+      img_input = Input(shape=(color_type, img_rows, img_cols), name='data')
+
+    x = ZeroPadding2D((3, 3), name='conv1_zeropadding')(img_input)
+    x = Convolution2D(64, 7, 7, subsample=(2, 2), name='conv1', bias=False)(x)
+    x = BatchNormalization(epsilon=eps, axis=bn_axis, name='bn_conv1')(x)
+    x = Scale(axis=bn_axis, name='scale_conv1')(x)
+    x = Activation('relu', name='conv1_relu')(x)
+    x = MaxPooling2D((3, 3), strides=(2, 2), name='pool1')(x)
+
+    x = resnet_conv_block(x, 3, [64, 64, 256], stage=2, block='a', strides=(1, 1))
+    x = identity_block(x, 3, [64, 64, 256], stage=2, block='b')
+    x = identity_block(x, 3, [64, 64, 256], stage=2, block='c')
+
+    x = resnet_conv_block(x, 3, [128, 128, 512], stage=3, block='a')
+    for i in range(1,8):
+      x = identity_block(x, 3, [128, 128, 512], stage=3, block='b'+str(i))
+
+    x = resnet_conv_block(x, 3, [256, 256, 1024], stage=4, block='a')
+    for i in range(1,36):
+      x = identity_block(x, 3, [256, 256, 1024], stage=4, block='b'+str(i))
+
+    x = resnet_conv_block(x, 3, [512, 512, 2048], stage=5, block='a')
+    x = identity_block(x, 3, [512, 512, 2048], stage=5, block='b')
+    x = identity_block(x, 3, [512, 512, 2048], stage=5, block='c')
+
+    # Truncate and replace softmax layer for transfer learning
+    # Cannot use model.layers.pop() since model is not of Sequential() type
+    # The method below works since pre-trained weights are stored in layers but not in the model
+    x_newfc = AveragePooling2D((7, 7), name='avg_pool')(x)
+    x_newfc = Flatten()(x_newfc)
+    x_newfc = Dense(num_classes, activation='softmax', name='fc8')(x_newfc)
+
+    model = Model(img_input, x_newfc)
+
+    gc.collect()
+
+    weights_path = os.path.join(SCENE_MODEL_SAVE_PATH, "RESNET_MODEL_WEIGHTS_2017_11_03_19_59_42.h5")
+
+    model.load_weights(weights_path, by_name=True)
+
+    # Learning rate is changed to 0.001
+    sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
+
+    return model
+
+
 def GetJpgList(p):
     if p == "":
         return []
@@ -234,10 +388,8 @@ if __name__ == '__main__':
         print('Test data folder can not find ...')
 
     # Load our model
-    LAST_SAVED_MODEL = "MODEL_2017_10_26_19_44_12.h5"
-    LAST_SAVED_MODEL_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, LAST_SAVED_MODEL)
-    # model = load_model(LAST_SAVED_MODEL)
-    model = densenet161_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes)
+    densenet_model = densenet161_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes)
+    resnet_model = resnet152_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes)
 
     # Make predictions
     predict_json = []
@@ -255,7 +407,11 @@ if __name__ == '__main__':
     for i in test_data_files:
         im = Image.open(os.path.join(SCENE_TEST_DATA_FOLDER_PATH, i))
         im_array = np.array(im).reshape(1, img_rows, img_cols, channel)
-        predictions_valid = model.predict(im_array, verbose=0)
+
+        densenet_predictions_valid = densenet_model.predict(im_array, verbose=0)
+        resnet_predictions_valid = resnet_model.predict(im_array, verbose=0)
+        predictions_valid = np.add(densenet_predictions_valid, resnet_predictions_valid)
+        predictions_valid = np.true_divide(predictions_valid, 2.0)
 
         predict_annotation_dic_temp = {}
         predict_annotation_dic_temp['image_id'] = i
@@ -268,9 +424,8 @@ if __name__ == '__main__':
         count += 1
         predict_json.append(predict_annotation_dic_temp)
 
-    (filepath, tempfilename) = os.path.split(LAST_SAVED_MODEL_PATH)
-    (shotname, extension) = os.path.splitext(tempfilename)
-    predict_json_file_path = open(shotname + "_train_predict_result.json", "w")
+    predict_json_file_name = "predict_result_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".json"
+    predict_json_file_path = open(predict_json_file_name, "w")
 
     json.dump(predict_json, predict_json_file_path)
 

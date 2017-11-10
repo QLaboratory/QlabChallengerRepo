@@ -2,3 +2,10 @@
 *.jpg
 *.npz
 *.h5
+
+
+.idea/
+.vscode/
+dataset/
+ai_challenger_scene/__pycache__/
+ai_challenger_scene/imagenet_models/
