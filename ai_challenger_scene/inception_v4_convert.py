@@ -12,7 +12,6 @@ import gc
 
 from sklearn.metrics import log_loss
 from scale_layer import Scale
-from load_scene import load_scene_data
 
 SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/inception_models"
 
@@ -248,7 +247,7 @@ def inception_v4_model(img_rows, img_cols, color_type=1, num_classeses=None, dro
 
     if K.image_dim_ordering() == 'th':
       # Use pre-trained weights for Theano backend
-      weights_path = 'inception_models/inception-v4_weights_th_dim_ordering_th_kernels.h5'
+      weights_path = 'imagenet_models/inception-v4_weights_th_dim_ordering_th_kernels.h5'
     else:
       # Use pre-trained weights for Tensorflow backend
       weights_path = 'inception_models/inception-v4_weights_tf_dim_ordering_tf_kernels.h5'
@@ -277,32 +276,14 @@ if __name__ == '__main__':
 
     img_rows, img_cols = 299, 299 # Resolution of inputs
     channel = 3
-    num_classes = 80 
-    batch_size = 8 
-    nb_epoch = 1
-
-    # Load Cifar10 data. Please implement your own load_data() module for your own dataset
-    X_train, Y_train, X_valid, Y_valid = load_scene_data(img_rows, img_cols)
+    num_classes = 10 
 
     # Load our model
     model = inception_v4_model(img_rows, img_cols, channel, num_classes, dropout_keep_prob=0.2)
 
-    # Start Fine-tuning
-    model.fit(X_train, Y_train,
-              batch_size=batch_size,
-              nb_epoch=nb_epoch,
-              shuffle=True,
-              verbose=1,
-              validation_data=(X_valid, Y_valid),
-              )
-
-    CURRENT_TIME = "MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
+    #save modeles
+    CURRENT_TIME = "INCEPTIONV4_MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
     CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
     model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
 
-    # Make predictions
-    predictions_valid = model.predict(X_valid, batch_size=batch_size, verbose=1)
-
-    # Cross-entropy loss score
-    score = log_loss(Y_valid, predictions_valid)
     gc.collect()

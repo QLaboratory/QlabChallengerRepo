@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 import os
+import gc
+import numpy as np
+from PIL import Image
+import json
+
+import os
 from datetime import datetime
 from keras.models import Sequential
 from keras.optimizers import SGD
@@ -7,7 +13,6 @@ from keras.layers import Input, Dense, Convolution2D, MaxPooling2D, AveragePooli
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 from keras import backend as K
-import gc
 
 from sklearn.metrics import log_loss
 from scale_layer import Scale
@@ -16,12 +21,31 @@ from load_scene import load_scene_data
 import sys
 sys.setrecursionlimit(3000)
 
+from scale_layer import Scale
+
 SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/resnet_models"
+# SCENE_MODEL_SAVE_PATH = "D:/QlabChallengerRepo/ai_challenger_scene/imagenet_models"
+SCENE_TEST_DATA_FOLDER_PATH = "/home/yan/Desktop/QlabChallengerRepo/scene_test_a_images_20170922_direct_resize_224_224"
+
+def GetJpgList(p):
+    if p == "":
+        return []
+    #p = p.replace("/", "\\")
+    if p[-1] != "/":
+        p = p + "/"
+    file_list = os.listdir(p)
+    jpg_list = []
+    for i in file_list:
+        if os.path.isfile(p + i):
+            name, suffix = os.path.splitext(p + i)
+            if ('.jpg' == suffix):
+                jpg_list.append(i)
+    return jpg_list
 
 def identity_block(input_tensor, kernel_size, filters, stage, block):
     '''The identity_block is the block that has no conv layer at shortcut
     # Arguments
-        input_tensor: input tensor
+        input_tensor: input ten vsor
         kernel_size: defualt 3, the kernel size of middle conv layer at main path
         filters: list of integers, the nb_filters of 3 conv layer at main path
         stage: integer, current stage label, used for generating layer names
@@ -146,23 +170,6 @@ def resnet152_model(img_rows, img_cols, color_type=1, num_classes=None):
     x = identity_block(x, 3, [512, 512, 2048], stage=5, block='b')
     x = identity_block(x, 3, [512, 512, 2048], stage=5, block='c')
 
-    x_fc = AveragePooling2D((7, 7), name='avg_pool')(x)
-    x_fc = Flatten()(x_fc)
-    x_fc = Dense(1000, activation='softmax', name='fc1000')(x_fc)
-
-    model = Model(img_input, x_fc)
-
-    gc.collect()
-
-    if K.image_dim_ordering() == 'th':
-      # Use pre-trained weights for Theano backend
-      weights_path = 'resnet_models/resnet152_weights_th.h5'
-    else:
-      # Use pre-trained weights for Tensorflow backend
-      weights_path = 'resnet_models/resnet152_weights_tf.h5'
-
-    model.load_weights(weights_path, by_name=True)
-
     # Truncate and replace softmax layer for transfer learning
     # Cannot use model.layers.pop() since model is not of Sequential() type
     # The method below works since pre-trained weights are stored in layers but not in the model
@@ -172,11 +179,24 @@ def resnet152_model(img_rows, img_cols, color_type=1, num_classes=None):
 
     model = Model(img_input, x_newfc)
 
+    gc.collect()
+
+    if K.image_dim_ordering() == 'th':
+      # Use pre-trained weights for Theano backend
+      weights_path = 'resnet_models/resnet152_weights_th.h5'
+    else:
+      # Use pre-trained weights for Tensorflow backend
+      weights_path = 'resnet_models/MODEL_WEIGHTS_2017_11_03_19_59_42.h5'
+
+    model.load_weights(weights_path, by_name=True)
+
+
     # Learning rate is changed to 0.001
     sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 
     return model
+
 
 if __name__ == '__main__':
 
@@ -185,31 +205,55 @@ if __name__ == '__main__':
     img_rows, img_cols = 224, 224 # Resolution of inputs
     channel = 3
     num_classes = 80
+    # batch_size = 1
     batch_size = 8
+    # nb_epoch = 10
     nb_epoch = 1
 
-    # Load Cifar10 data. Please implement your own load_data() module for your own dataset
-    X_train, Y_train, X_valid, Y_valid = load_scene_data(img_rows, img_cols)
+    # Load Scene data. Please implement your own load_data() module for your own dataset
+    if os.path.exists(SCENE_TEST_DATA_FOLDER_PATH):
+        test_data_files = GetJpgList(SCENE_TEST_DATA_FOLDER_PATH)
+    else:
+        print('Test data folder can not find ...')
 
     # Load our model
-    model = resnet152_model(img_rows, img_cols, channel, num_classes)
-
-    # Start Fine-tuning
-    model.fit(X_train, Y_train,
-              batch_size=batch_size,
-              nb_epoch=nb_epoch,
-              shuffle=True,
-              verbose=1,
-              validation_data=(X_valid, Y_valid),
-              )
-
-    #save modeles
-    CURRENT_TIME = "MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
-    CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
-    model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
+    LAST_SAVED_MODEL = "MODEL_2017_10_26_19_44_12.h5"
+    LAST_SAVED_MODEL_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, LAST_SAVED_MODEL)
+    # model = load_model(LAST_SAVED_MODEL)
+    model = resnet152_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes)
 
     # Make predictions
-    predictions_valid = model.predict(X_valid, batch_size=batch_size, verbose=1)
+    predict_json = []
+    count = 1
+    totalnum = str(len(test_data_files))
+    # predict_annotation_dic_temp = {}
+    # predict_annotation_dic_temp['image_id'] = "1.jpg"
+    # predict_annotation_dic_temp['label_id'] = [1, 2, 3]
+    # predict_json.append(predict_annotation_dic_temp)
+    # predict_annotation_dic_temp = {}
+    # predict_annotation_dic_temp['image_id'] = "2.jpg"
+    # predict_annotation_dic_temp['label_id'] = [2, 3, 4]
+    # predict_json.append(predict_annotation_dic_temp)
 
-    # Cross-entropy loss score
-    score = log_loss(Y_valid, predictions_valid)
+    for i in test_data_files:
+        im = Image.open(os.path.join(SCENE_TEST_DATA_FOLDER_PATH, i))
+        im_array = np.array(im).reshape(1, img_rows, img_cols, channel)
+        predictions_valid = model.predict(im_array, verbose=1)
+
+        predict_annotation_dic_temp = {}
+        predict_annotation_dic_temp['image_id'] = i
+        predict_label_id = predictions_valid[0].argsort()[-3:][::-1]
+        predict_annotation_dic_temp['label_id'] = predict_label_id.tolist()
+        print(str(count) + "/" + totalnum)
+        print(predict_annotation_dic_temp)
+        # print(predict_label_id)
+        count += 1
+        predict_json.append(predict_annotation_dic_temp)
+
+    (filepath, tempfilename) = os.path.split(LAST_SAVED_MODEL_PATH)
+    (shotname, extension) = os.path.splitext(tempfilename)
+    predict_json_file_path = open(shotname + "_predict_result.json", "w")
+
+    json.dump(predict_json, predict_json_file_path)
+
+    gc.collect()

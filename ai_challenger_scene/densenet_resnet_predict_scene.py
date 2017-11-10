@@ -3,6 +3,7 @@ import os
 import gc
 import numpy as np
 from PIL import Image
+from datetime import datetime
 import json
 
 from keras.optimizers import SGD
@@ -16,11 +17,9 @@ import keras.backend as K
 
 from scale_layer import Scale
 
-# SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/imagenet_models"
-SCENE_MODEL_SAVE_PATH = "D:/QlabChallengerRepo/ai_challenger_scene/imagenet_models"
+SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/predict_loaded_models"
+SCENE_TEST_DATA_FOLDER_PATH = "/home/yan/Desktop/QlabChallengerRepo/scene_test_a_images_20170922_direct_resize_224_224"
 
-
-SCENE_TEST_DATA_FOLDER_PATH = "D:/QlabChallengerRepo/dataset/scene_train_images_20170904_direct_resize_224_224"
 
 def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.5, dropout_rate=0.0, weight_decay=1e-4, num_classes=None):
     '''
@@ -97,9 +96,7 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
 
     model = Model(img_input, x_newfc)
 
-    weights_path = os.path.join(SCENE_MODEL_SAVE_PATH, "DENSENET_MODEL_WEIGHTS_2017_11_01_14_51_56.h5")
-
-    model.load_weights(weights_path, by_name=True)
+    model.load_weights('densenet_models/DENSENET_MODEL_WEIGHTS_2017_11_09_20_49_12.h5', by_name=True)
 
     # Learning rate is changed to 0.001
     sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
@@ -342,9 +339,8 @@ def resnet152_model(img_rows, img_cols, color_type=1, num_classes=None):
 
     gc.collect()
 
-    weights_path = os.path.join(SCENE_MODEL_SAVE_PATH, "RESNET_MODEL_WEIGHTS_2017_11_03_19_59_42.h5")
 
-    model.load_weights(weights_path, by_name=True)
+    model.load_weights('resnet_models/RESNET_MODEL_WEIGHTS_2017_11_08_20_54_01.h5', by_name=True)
 
     # Learning rate is changed to 0.001
     sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
