@@ -42,7 +42,7 @@ from keras.engine.topology import get_source_inputs
 from keras.optimizers import SGD
 from keras.utils import np_utils
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
-
+from keras.callbacks import ModelCheckpoint
 
 SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/resnet50"
 
@@ -229,13 +229,21 @@ if __name__ == '__main__':
                 classes=our_class)
     #print(train_generator.class_indices)
     #print(validation_generator.class_indices)
-    
+
+    # Callback
+    checkpointer = ModelCheckpoint(filepath='/tmp/weights.{epoch:02d}-{val_acc:.5f}.hdf5',
+                                   monitor='val_acc',
+                                   verbose=1,
+                                   save_weights_only= True,
+                                   save_best_only=False)
+
     # Start Fine-tuning
     model.fit_generator(train_generator,
               steps_per_epoch=nb_train_samples//batch_size,
               epochs=nb_epoch,
               shuffle=True,
               verbose=1,
+              callbacks=[checkpointer],
               validation_data=validation_generator,
               validation_steps=nb_validation_samples//batch_size)
 
