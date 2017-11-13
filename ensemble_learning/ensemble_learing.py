@@ -5,82 +5,131 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 
-tf.logging.set_verbosity(tf.logging.INFO)
+SUMMARY_LOG_SAVE_PATH = ""
 
-def ensemble_net(features, labels, mode):
+def VariableSummaries(var):
+  #¼ÇÂ¼ÕÅÁ¿
+  with tf.name_scope('summaries'):
+    mean = tf.reduce_mean(var)
+    tf.summary.scalar('mean', mean)
+    with tf.name_scope('stddev'):
+      stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+    tf.summary.scalar('stddev', stddev)
+    tf.summary.scalar('max', tf.reduce_max(var))
+    tf.summary.scalar('min', tf.reduce_min(var))
+    tf.summary.histogram('histogram', var)
 
-    """Model function for Net."""
+def feed_dict(train, batch_size=256):
+  # TODO ÊµÏÖ±êÇ©Êı¾İµÄÑ¡È¡
+  if train:
+    xs, ys = mnist.train.next_batch(batch_size)
+  else:
+    xs, ys = mnist.test.images, mnist.test.labels
 
-    # è¾“å…¥å±‚ï¼Œè¾“å…¥å¼ é‡ä¸º [batch_size, width, channels]
-    channels = 5 #è¦å’Œç½‘ç»œæ•°ä¸€è‡´
-    input_layer = tf.reshape(features["x"], [-1, 80, channels])
+  return {x: xs, y_: ys}
 
-    # SEæ¨¡å—
-    se = tf.reduce_mean(input_layer, 1, name='global_avg_pooling')
-    se = tf.layers.dense(inputs=se, units=channels, activation=tf.nn.relu, name='fc1')
-    se = tf.layers.dense(inputs=se, units=channels, activation=tf.nn.sigmoid, name='fc2')
-
-    l = input_layer * tf.reshape(se, [-1, 1, channels])
-    l = tf.layers.conv1d(inputs = l, filters=1, strides=1, kernel_size=1)
-    
-    # å»é™¤å¤šä½™ç»´æ•°
-    l = tf.squeeze(l)
-    # é¢„æµ‹å±‚
-    predictions = {
-        "classes": tf.argmax(input=l, axis=1),
-        "probabilities": tf.nn.softmax(l, name="softmax_tensor")
-        }
-    
-    if mode == tf.estimator.ModeKeys.PREDICT:
-        return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
-
-    # è¯»å…¥æµ‹è¯•é›†æ ‡ç­¾
-    onehot_labels = tf.one_hot(indices=tf.cast(labels, tf.int32), depth=80)
-    loss = tf.losses.softmax_cross_entropy(onehot_labels=onehot_labels, logits=l)
-
-    if mode == tf.estimator.ModeKeys.TRAIN:
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
-        train_op = optimizer.minimize(
-            loss=loss,
-            global_step=tf.train.get_global_step())
-        return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
-
-    # ç²¾åº¦è¯„ä¼°
-    eval_metric_ops = {
-        "accuracy": tf.metrics.accuracy(
-        labels=labels, predictions=predictions["classes"])}
-    return tf.estimator.EstimatorSpec(mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
 def main(unused_argv):
-    # åŠ è½½è®­ç»ƒæ•°æ®
-    # TODO jsonæ ¼å¼è¯»å–
-    train_data = np.arange(1000*80*5, dtype=np.float32).reshape(1000, 80, 5)  # 5è¦å’Œç½‘ç»œæ•°ä¸€è‡´
+
+    #Êı¾İ²ÎÊı
+    net_num = 3
+    img_num = 50000
+    class_num = 80
+    epoch = 10
+    batch_size = 256
+    learning_rate = 0.001
+
+    # ¼ÓÔØÑµÁ·Êı¾İ
+    # TODO json¸ñÊ½¶ÁÈ¡ feed_dictº¯ÊıÊµÏÖ
+    train_data = np.arange(1000*80*5, dtype=np.float32).reshape(1000, 80, 5)  # 5ÒªºÍÍøÂçÊıÒ»ÖÂ
     train_labels = np.arange(1000, dtype=np.int32).reshape(1000)
 
-    eval_data = np.arange(200*80*5, dtype=np.float32).reshape(200, 80, 5)  # 5è¦å’Œç½‘ç»œæ•°ä¸€è‡´
+    eval_data = np.arange(200*80*5, dtype=np.float32).reshape(200, 80, 5)  # 5ÒªºÍÍøÂçÊıÒ»ÖÂ
     eval_labels = np.arange(200, dtype=np.int32).reshape(200)
 
-    ensemble_net_classifier = tf.estimator.Estimator(
-        model_fn=ensemble_net, model_dir="/tmp/ensemble_net")    
+    sess = tf.InteractiveSession()
 
-    tensors_to_log = {"probabilities": "softmax_tensor"}
-    logging_hook = tf.train.LoggingTensorHook(tensors=tensors_to_log, every_n_iter=5)
+    #ÊäÈëÕ¼Î»
+    with tf.name_scope('input'):
+        x = tf.placeholder(tf.float32, [None, class_num, net_num], name='x-input')
+        y_ = tf.placeholder(tf.float32, [None, class_num], name='y-input')
 
-    train_input_fn = tf.estimator.inputs.numpy_input_fn(
-        x={"x": train_data},
-        y=train_labels,
-        batch_size=10,
-        num_epochs=None,
-        shuffle=True)
-    ensemble_net_classifier.train(input_fn=train_input_fn, steps=100, hooks=[logging_hook])
+    '''SEÄ£¿é'''
+    #È«¾Ö³Ø»¯
+    global_max_pooling = tf.reduce_max(x, 1, name='global_max_pooling')
+    VariableSummaries(global_max_pooling)
 
-    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
-        x={"x": eval_data},
-        y=eval_labels,
-        num_epochs=1,
-        shuffle=False)
-    eval_results = ensemble_net_classifier.evaluate(input_fn=eval_input_fn)
-    print(eval_results)
-  
+    #µÚÒ»²ãÈ«Á¬½Ó
+    with tf.name_scope('fc1'):
+        fc1 = tf.layers.dense(inputs=global_max_pooling, units=net_num, activation=tf.nn.relu, name='fc1')
+    VariableSummaries(fc1)
+
+    #µÚ¶ş²ãÈ«Á¬½Ó
+    with tf.name_scope('fc2'):
+        fc2 = tf.layers.dense(inputs=fc1, units=net_num, activation=tf.nn.sigmoid, name='fc2')
+    VariableSummaries(fc2)
+
+    #¼ÓÈ¨
+    with tf.name_scope('scale'):
+        scale = tf.reshape(fc2, [-1, 1, net_num])
+        scaled_x = x * fc2
+    VariableSummaries(scaled_x)
+
+    with tf.name_scope('cov1'):
+        sum_x = tf.layers.conv1d(inputs=scaled_x, filters=1, strides=1, kernel_size=1)
+        # È¥³ı¶àÓàÎ¬Êı
+        y = tf.squeeze(sum_x)
+    VariableSummaries(y)
+
+    #¼ÆËã½»²æìØ
+    with tf.name_scope('cross_entropy'):
+      diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
+      with tf.name_scope('total'):
+        cross_entropy = tf.reduce_mean(diff)
+    tf.summary.scalar('cross_entropy', cross_entropy)
+
+    #ÑµÁ·²½Öè
+    with tf.name_scope('train'):
+      train_step = tf.train.AdamOptimizer(learning_rate).minimize(
+          cross_entropy)
+
+    #¾«¶ÈÆÀ¹À
+    with tf.name_scope('accuracy'):
+      with tf.name_scope('correct_prediction'):
+        correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
+      with tf.name_scope('accuracy'):
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    tf.summary.scalar('accuracy', accuracy)
+
+    #tensorboard¼ÇÂ¼
+    merged = tf.summary.merge_all()
+    train_writer = tf.summary.FileWriter(SUMMARY_LOG_SAVE_PATH + '/train', sess.graph)
+    test_writer = tf.summary.FileWriter(SUMMARY_LOG_SAVE_PATH + '/test')
+    tf.global_variables_initializer().run()
+
+    #¿ªÊ¼ÑµÁ·»òÔ¤²â
+    for i in range(img_num//batch_size*epoch):
+      if i % 20 == 0:  # Record summaries and test-set accuracy
+        summary, acc = sess.run([merged, accuracy], feed_dict=feed_dict(False))
+        test_writer.add_summary(summary, i)
+        print('Accuracy at step %s: %s' % (i, acc))
+      else:  # Record train set summaries, and train
+        if i % 40 == 39:  # Record execution stats
+          run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+          run_metadata = tf.RunMetadata()
+          summary, _ = sess.run([merged, train_step],
+                                feed_dict=feed_dict(True, batch_size=batch_size),
+                                options=run_options,
+                                run_metadata=run_metadata)
+          train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
+          train_writer.add_summary(summary, i)
+          print('Adding run metadata for', i)
+        else:  # Record a summary
+          summary, _ = sess.run([merged, train_step], feed_dict=feed_dict(True, batch_size=batch_size))
+          train_writer.add_summary(summary, i)
+    train_writer.close()
+    test_writer.close()
+
+
 if __name__ == "__main__":
-    tf.app.run()
+    tf.app.run(main=main)
