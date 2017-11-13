@@ -1,12 +1,4 @@
 # -*- coding: utf-8 -*-
-'''ResNet50 model for Keras.
-
-# Reference:
-
-- [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385)
-
-Adapted from code contributed by BigMoyan.
-'''
 from __future__ import print_function
 import os
 import numpy as np
@@ -16,6 +8,8 @@ import sys
 import cv2
 import numpy as np
 from datetime import datetime
+from PIL import Image
+import json
 
 
 from keras.layers import Input
@@ -44,7 +38,10 @@ from keras.utils import np_utils
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 from keras.callbacks import ModelCheckpoint
 
-SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/resnet50"
+# SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/imagenet_models"
+SCENE_MODEL_SAVE_PATH = "D:/QlabChallengerRepo/ai_challenger_scene/imagenet_models"
+SCENE_TEST_DATA_FOLDER_PATH = "/home/yan/Desktop/QlabChallengerRepo/scene_test_a_images_20170922_direct_resize_224_224"
+PREDICT_MODEL = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/predict_loaded_models/RESNET_50_MODEL_WEIGHTS.06-0.77963.hdf5"
 
 def identity_block(input_tensor, kernel_size, filters, stage, block):
     """The identity block is the block that has no conv layer at shortcut.
@@ -131,8 +128,7 @@ def conv_block(input_tensor, kernel_size, filters, stage, block, strides=(2, 2))
 
 
 def ResNet50(img_rows, img_cols, color_type=1, num_classes=None):
-
-    # Determine proper input shape
+     # Determine proper input shape
     # Handle Dimension Ordering for different backends
     global bn_axis
     if K.image_dim_ordering() == 'tf':
@@ -179,7 +175,7 @@ def ResNet50(img_rows, img_cols, color_type=1, num_classes=None):
     model = Model(img_input, x_newfc)
 
      # load weights
-    model.load_weights('resnet50/weights.00-0.76503.hdf5')
+    model.load_weights(PREDICT_MODEL)
 
     # Learning rate is changed to 0.001
     sgd = SGD(lr=1e-4, decay=1e-6, momentum=0.9, nesterov=True)
@@ -187,68 +183,73 @@ def ResNet50(img_rows, img_cols, color_type=1, num_classes=None):
 
     return model
 
+def GetJpgList(p):
+    if p == "":
+        return []
+    # p = p.replace("/", "\\")
+    if p[-1] != "/":
+        p = p + "/"
+    file_list = os.listdir(p)
+    jpg_list = []
+    for i in file_list:
+        if os.path.isfile(p + i):
+            name, suffix = os.path.splitext(p + i)
+            if ('.jpg' == suffix):
+                jpg_list.append(i)
+    return jpg_list
+
 
 if __name__ == '__main__':
-    
+
+    # Example to fine-tune on 3000 samples from Cifar10
+
     img_rows, img_cols = 224, 224 # Resolution of inputs
     channel = 3
     num_classes = 80
-    batch_size = 16
-    nb_epoch = 10
-    nb_train_samples = 53880
-    nb_validation_samples = 7120
+    # batch_size = 1
+    batch_size = 8
+    # nb_epoch = 10
+    nb_epoch = 1
 
-    # Load our model
+    # Load Scene data. Please implement your own load_data() module for your own dataset
+    if os.path.exists(SCENE_TEST_DATA_FOLDER_PATH):
+        test_data_files = GetJpgList(SCENE_TEST_DATA_FOLDER_PATH)
+    else:
+        print('Test data folder can not find ...')
+
     model = ResNet50(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes)
 
-    #classes
-    our_class = []
-    for i in range(num_classes):
-        our_class.append(str(i))
+    # Make predictions
+    predict_json = []
+    count = 1
+    totalnum = str(len(test_data_files))
+    # predict_annotation_dic_temp = {}
+    # predict_annotation_dic_temp['image_id'] = "1.jpg"
+    # predict_annotation_dic_temp['label_id'] = [1, 2, 3]
+    # predict_json.append(predict_annotation_dic_temp)
+    # predict_annotation_dic_temp = {}
+    # predict_annotation_dic_temp['image_id'] = "2.jpg"
+    # predict_annotation_dic_temp['label_id'] = [2, 3, 4]
+    # predict_json.append(predict_annotation_dic_temp)
 
-    # data arguement
-    train_datagen = ImageDataGenerator(
-                rotation_range=20,
-                width_shift_range=0.2,
-                height_shift_range=0.2,
-                shear_range=0.2,
-                zoom_range=0.2,
-                horizontal_flip=True,
-                fill_mode='nearest')
-    test_datagen = ImageDataGenerator()
+    for i in test_data_files:
+        im = Image.open(os.path.join(SCENE_TEST_DATA_FOLDER_PATH, i))
+        im_array = np.array(im).reshape(1, img_rows, img_cols, channel)
+        predictions_valid = model.predict(im_array, verbose=0)
 
-    train_generator = train_datagen.flow_from_directory(
-                '/home/yan/Desktop/QlabChallengerRepo/dataset_224/data/train/',
-                target_size=(img_rows,img_cols),
-                batch_size=batch_size,
-                classes=our_class)
-    validation_generator = test_datagen.flow_from_directory(
-                '/home/yan/Desktop/QlabChallengerRepo/dataset_224/data/valid/',
-                target_size=(img_rows,img_cols),
-                batch_size=batch_size,
-                classes=our_class)
-    #print(train_generator.class_indices)
-    #print(validation_generator.class_indices)
+        predict_annotation_dic_temp = {}
+        predict_annotation_dic_temp['image_id'] = i
+        predict_label_id = predictions_valid[0].argsort()[-3:][::-1]
+        predict_annotation_dic_temp['label_id'] = predict_label_id.tolist()
+        if (count % 100 == 0):
+            print(str(count) + "/" + totalnum)
+        # print(predict_annotation_dic_temp)
+        # print(predict_label_id)
+        count += 1
+        predict_json.append(predict_annotation_dic_temp)
 
-    # Callback
-    checkpointer = ModelCheckpoint(filepath='/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/resnet50/RESNET_50_MODEL_WEIGHTS.{epoch:02d}-{val_acc:.5f}.hdf5',
-                                   monitor='val_acc',
-                                   verbose=1,
-                                   save_weights_only= True,
-                                   save_best_only=False)
+    predict_json_file_path = open("/home/yan/Desktop/ResNet50" + "_predict_result.json", "w")
 
-    # Start Fine-tuning
-    model.fit_generator(train_generator,
-              steps_per_epoch=nb_train_samples//batch_size,
-              epochs=nb_epoch,
-              shuffle=True,
-              verbose=1,
-              callbacks=[checkpointer],
-              validation_data=validation_generator,
-              validation_steps=nb_validation_samples//batch_size)
-
-    CURRENT_TIME = "RESNET_50_MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
-    CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
-    model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
+    json.dump(predict_json, predict_json_file_path)
 
     gc.collect()
