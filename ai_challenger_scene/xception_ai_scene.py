@@ -154,10 +154,10 @@ def Xception(img_rows, img_cols, color_type=1, num_classes=None):
     model = Model(img_input, x_newfc, name='xception')
 
     # load weights
-    model.load_weights('Xception/XCEPTION_MODEL_WEIGHTS_2017_11_10_17_28_38.h5')
+    model.load_weights('Xception/XCEPTION_MODEL_WEIGHTS.04-0.81376.h5')
     
     # Learning rate is changed to 0.001
-    sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
+    sgd = SGD(lr=5e-6, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 
 
@@ -177,7 +177,7 @@ if __name__ == '__main__':
     channel = 3
     num_classes = 80
     batch_size = 8
-    nb_epoch = 20
+    nb_epoch = 5
     nb_train_samples = 53880
     nb_validation_samples = 7120
 
