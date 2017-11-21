@@ -20,7 +20,9 @@ officialClassificationDICT = json.load(officialClassificationFile)
 predictionClassificationFile = open(PREDICTION_CLASSIFICATION_FILE_PATH, 'r', encoding='UTF-8')
 predictionClassificationLIST = json.load(predictionClassificationFile)
 
-ClassificationErrorDictionary = []
+# 存储场景分类错误单张影像的详细信息
+ClassificationErrorDetailDictionary = []
+# 存储场景分类错误统计信息
 ClassificationErrorStatisticsMatrix = np.zeros((80, 84))
 
 # 遍历预测的JSON文件
@@ -56,21 +58,47 @@ for i in range(len(predictionClassificationLIST)):
 
         classification_error_temp['label_id_predict_name'] = label_id_predict_name_temp
         print(classification_error_temp)
-        ClassificationErrorDictionary.append(classification_error_temp)
+        ClassificationErrorDetailDictionary.append(classification_error_temp)
 
+
+# 存储场景分类错误统计输出信息
+ClassificationErrorStatisticDictionary = []
 for i in range(80):
     ClassificationErrorStatisticsMatrix[i, 0] = i
     ClassificationErrorStatisticsMatrix[i, 3] = np.true_divide(ClassificationErrorStatisticsMatrix[i, 2], ClassificationErrorStatisticsMatrix[i, 1]) * 100
 
+    classification_error_statistic_temp = {}
+    classification_error_statistic_temp['label_id'] = i
+    classification_error_statistic_temp['label_id_name'] = sceneClassesJSON[str(i)]
+    classification_error_statistic_temp['total_number'] = ClassificationErrorStatisticsMatrix[i, 1]
+    classification_error_statistic_temp['classification_error_number'] = ClassificationErrorStatisticsMatrix[i, 2]
+    classification_error_statistic_temp['classification_error_percentage'] = ClassificationErrorStatisticsMatrix[i, 3]
+
+    classification_error_statistic_temp_list = ClassificationErrorStatisticsMatrix[i, 4:len(ClassificationErrorStatisticsMatrix[0])]
+    classification_error_statistic_temp_list_sort = classification_error_statistic_temp_list.argsort()[-3:][::-1].tolist()
+    classification_error_statistic_temp['classification_error_statistic_label_id'] = classification_error_statistic_temp_list_sort
+    classification_error_statistic_name_temp = []
+    for k in classification_error_statistic_temp_list_sort:
+        classification_error_statistic_name_temp.append(sceneClassesJSON[str(k)])
+    classification_error_statistic_temp['classification_error_statistic_label_name'] = classification_error_statistic_name_temp
+    ClassificationErrorStatisticDictionary.append(classification_error_statistic_temp)
+    print(classification_error_statistic_temp)
+
+
 (filepath, tempfilename) = os.path.split(PREDICTION_CLASSIFICATION_FILE_PATH)
 (shotname, extension) = os.path.splitext(tempfilename)
-CLASSIFICATION_ERROR_STATISTICS_FILE_PATH = shotname + "_classification_error_detail_statistics" + ".json"
-CLASSIFICATION_ERROR_STATISTICS_FILE = open(CLASSIFICATION_ERROR_STATISTICS_FILE_PATH, "w", encoding='UTF-8')
+CLASSIFICATION_ERROR_DETAIL_STATISTICS_FILE_PATH = shotname + "_classification_error_detail_statistics" + ".json"
+CLASSIFICATION_ERROR_STATISTICS_FILE = open(CLASSIFICATION_ERROR_DETAIL_STATISTICS_FILE_PATH, "w", encoding='UTF-8')
 
-print(len(ClassificationErrorDictionary))
-json.dump(ClassificationErrorDictionary, CLASSIFICATION_ERROR_STATISTICS_FILE, indent=2, ensure_ascii=False)
+print(len(ClassificationErrorDetailDictionary))
+json.dump(ClassificationErrorDetailDictionary, CLASSIFICATION_ERROR_STATISTICS_FILE, indent=2, ensure_ascii=False)
 
-# ClassificationErrorStatisticsMatrix[:, 3] = 100 * ClassificationErrorStatisticsMatrix[:, 2] // ClassificationErrorStatisticsMatrix[:, 1] 
+
+CLASSIFICATION_ERROR_TOTAL_STATISTICS_FILE_PATH = shotname + "_classification_error_total_statistics" + ".json"
+CLASSIFICATION_ERROR_TOTAL_STATISTICS_FILE = open(CLASSIFICATION_ERROR_TOTAL_STATISTICS_FILE_PATH, "w", encoding='UTF-8')
+json.dump(ClassificationErrorStatisticDictionary, CLASSIFICATION_ERROR_TOTAL_STATISTICS_FILE, indent=2, ensure_ascii=False)
+
+
 CLASSIFICATION_ERROR_STATISTICS_MATRIX_FILE_PATH = shotname + "_classification_error_statistics" + ".txt"
 print(ClassificationErrorStatisticsMatrix)
-np.savetxt(CLASSIFICATION_ERROR_STATISTICS_MATRIX_FILE_PATH, ClassificationErrorStatisticsMatrix)
+np.savetxt(CLASSIFICATION_ERROR_STATISTICS_MATRIX_FILE_PATH, ClassificationErrorStatisticsMatrix, fmt='%d', delimiter='\t', newline='\r\n')
