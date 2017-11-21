@@ -1,33 +1,35 @@
 # -*- coding: utf-8 -*-
 import os
+import sys
+import cv2
+import numpy as np
 from datetime import datetime
 
 from keras.optimizers import SGD
 from keras.layers import Input, merge, ZeroPadding2D
 from keras.layers.core import Dense, Dropout, Activation
-from keras.layers.convolutional import Conv2D
+from keras.layers.convolutional import Convolution2D
 from keras.layers.pooling import AveragePooling2D, GlobalAveragePooling2D, MaxPooling2D
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 import keras.backend as K
-import gc
-
-
+from keras.utils import np_utils
+from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 from sklearn.metrics import log_loss
-from scale_layer import Scale
+from custom_layers.scale_layer import Scale
 
-SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/densenet_models"
+SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/densenet121"
 
-def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.5, dropout_rate=0.0, weight_decay=1e-4, num_classes=None):
+def densenet121_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth_rate=32, nb_filter=64, reduction=0.5, dropout_rate=0.0, weight_decay=1e-4, num_classes=None):
     '''
-    DenseNet 161 Model for Keras
+    DenseNet 121 Model for Keras
 
     Model Schema is based on 
     https://github.com/flyyufelix/DenseNet-Keras
 
     ImageNet Pretrained Weights 
-    Theano: https://drive.google.com/open?id=0Byy2AcGyEVxfVnlCMlBGTDR3RGs
-    TensorFlow: https://drive.google.com/open?id=0Byy2AcGyEVxfUDZwVjU2cFNidTA
+    Theano: https://drive.google.com/open?id=0Byy2AcGyEVxfMlRYb3YzV210VzQ
+    TensorFlow: https://drive.google.com/open?id=0Byy2AcGyEVxfSTA4SHJVOHNuTXc
 
     # Arguments
         nb_dense_block: number of dense blocks to add to end
@@ -50,18 +52,18 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
     global concat_axis
     if K.image_dim_ordering() == 'tf':
       concat_axis = 3
-      img_input = Input(shape=(224, 224, 3), name='data')
+      img_input = Input(shape=(img_rows, img_cols, color_type), name='data')
     else:
       concat_axis = 1
-      img_input = Input(shape=(3, 224, 224), name='data')
+      img_input = Input(shape=(color_type, img_rows, img_cols), name='data')
 
     # From architecture for ImageNet (Table 1 in the paper)
-    nb_filter = 96
-    nb_layers = [6,12,36,24] # For DenseNet-161
+    nb_filter = 64
+    nb_layers = [6,12,24,16] # For DenseNet-121
 
     # Initial convolution
     x = ZeroPadding2D((3, 3), name='conv1_zeropadding')(img_input)
-    x = Conv2D(nb_filter, (7, 7), name='conv1', strides=(2, 2), use_bias=False)(x)
+    x = Convolution2D(nb_filter, 7, 7, subsample=(2, 2), name='conv1', bias=False)(x)
     x = BatchNormalization(epsilon=eps, axis=concat_axis, name='conv1_bn')(x)
     x = Scale(axis=concat_axis, name='conv1_scale')(x)
     x = Activation('relu', name='relu1')(x)
@@ -84,21 +86,6 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
     x = Scale(axis=concat_axis, name='conv'+str(final_stage)+'_blk_scale')(x)
     x = Activation('relu', name='relu'+str(final_stage)+'_blk')(x)
 
-    x_fc = GlobalAveragePooling2D(name='pool'+str(final_stage))(x)
-    x_fc = Dense(1000, name='fc6')(x_fc)
-    x_fc = Activation('softmax', name='prob')(x_fc)
-
-    model = Model(img_input, x_fc, name='densenet')
-
-    if K.image_dim_ordering() == 'th':
-      # Use pre-trained weights for Theano backend
-      weights_path = 'densenet121/densenet161_weights_th.h5'
-    else:
-      # Use pre-trained weights for Tensorflow backend
-      weights_path = 'densenet121/densenet121_weights_tf.h5'
-
-    model.load_weights(weights_path, by_name=True)
-
     # Truncate and replace softmax layer for transfer learning
     # Cannot use model.layers.pop() since model is not of Sequential() type
     # The method below works since pre-trained weights are stored in layers but not in the model
@@ -107,6 +94,16 @@ def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
     x_newfc = Activation('softmax', name='prob')(x_newfc)
 
     model = Model(img_input, x_newfc)
+
+    if K.image_dim_ordering() == 'th':
+      # Use pre-trained weights for Theano backend
+      weights_path = 'densenet121/densenet121_weights_th.h5'
+    else:
+      # Use pre-trained weights for Tensorflow backend
+      weights_path = 'densenet121/densenet121_weights_tf.h5'
+
+    model.load_weights(weights_path, by_name=True)
+
 
     # Learning rate is changed to 0.001
     sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
@@ -134,7 +131,7 @@ def conv_block(x, stage, branch, nb_filter, dropout_rate=None, weight_decay=1e-4
     x = BatchNormalization(epsilon=eps, axis=concat_axis, name=conv_name_base+'_x1_bn')(x)
     x = Scale(axis=concat_axis, name=conv_name_base+'_x1_scale')(x)
     x = Activation('relu', name=relu_name_base+'_x1')(x)
-    x = Conv2D(inter_channel, (1, 1), name=conv_name_base+'_x1', use_bias=False)(x)
+    x = Convolution2D(inter_channel, 1, 1, name=conv_name_base+'_x1', bias=False)(x)
 
     if dropout_rate:
         x = Dropout(dropout_rate)(x)
@@ -144,7 +141,7 @@ def conv_block(x, stage, branch, nb_filter, dropout_rate=None, weight_decay=1e-4
     x = Scale(axis=concat_axis, name=conv_name_base+'_x2_scale')(x)
     x = Activation('relu', name=relu_name_base+'_x2')(x)
     x = ZeroPadding2D((1, 1), name=conv_name_base+'_x2_zeropadding')(x)
-    x = Conv2D(nb_filter, (3, 3), name=conv_name_base+'_x2', use_bias=False)(x)
+    x = Convolution2D(nb_filter, 3, 3, name=conv_name_base+'_x2', bias=False)(x)
 
     if dropout_rate:
         x = Dropout(dropout_rate)(x)
@@ -171,7 +168,7 @@ def transition_block(x, stage, nb_filter, compression=1.0, dropout_rate=None, we
     x = BatchNormalization(epsilon=eps, axis=concat_axis, name=conv_name_base+'_bn')(x)
     x = Scale(axis=concat_axis, name=conv_name_base+'_scale')(x)
     x = Activation('relu', name=relu_name_base)(x)
-    x = Conv2D(int(nb_filter * compression), 1, 1, name=conv_name_base, use_bias=False)(x)
+    x = Convolution2D(int(nb_filter * compression), 1, 1, name=conv_name_base, bias=False)(x)
 
     if dropout_rate:
         x = Dropout(dropout_rate)(x)
@@ -207,21 +204,58 @@ def dense_block(x, stage, nb_layers, nb_filter, growth_rate, dropout_rate=None, 
 
     return concat_feat, nb_filter
 
-
 if __name__ == '__main__':
-
-    # Example to fine-tune on 3000 samples from Cifar10
 
     img_rows, img_cols = 224, 224 # Resolution of inputs
     channel = 3
     num_classes = 80
+    batch_size = 8
+    nb_epoch = 2
+    nb_train_samples = 53880
+    nb_validation_samples = 7120
 
     # Load our model
-    model = densenet161_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes)
+    model = densenet121_model(img_rows=img_rows, img_cols=img_cols, color_type=channel, num_classes=num_classes,dropout_rate=0.2)
 
-    #save modeles
-    CURRENT_TIME = "DENSENET_MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
+    #classes
+    our_class = []
+    for i in range(num_classes):
+        our_class.append(str(i))
+
+    # data arguement
+    train_datagen = ImageDataGenerator(
+                rotation_range=20,
+                width_shift_range=0.2,
+                height_shift_range=0.2,
+                shear_range=0.2,
+                zoom_range=0.2,
+                horizontal_flip=True,
+                fill_mode='nearest')
+    test_datagen = ImageDataGenerator()
+
+    train_generator = train_datagen.flow_from_directory(
+                '/home/yan/Desktop/QlabChallengerRepo/dataset_224/data/train/',
+                target_size=(img_rows,img_cols),
+                batch_size=batch_size,
+                classes=our_class)
+    validation_generator = test_datagen.flow_from_directory(
+                '/home/yan/Desktop/QlabChallengerRepo/dataset_224/data/valid/',
+                target_size=(img_rows,img_cols),
+                batch_size=batch_size,
+                classes=our_class)
+    #print(train_generator.class_indices)
+    #print(validation_generator.class_indices)
+    
+    # Start Fine-tuning
+    model.fit_generator(train_generator,
+              steps_per_epoch=nb_train_samples//batch_size,
+              epochs=nb_epoch,
+              shuffle=True,
+              verbose=1,
+              validation_data=validation_generator,
+              validation_steps=nb_validation_samples//batch_size)
+
+    CURRENT_TIME = "DENSENET121_MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
     CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
     model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
 
-    gc.collect()
