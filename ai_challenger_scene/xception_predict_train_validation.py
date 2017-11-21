@@ -51,8 +51,8 @@ from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_a
 from keras.callbacks import ModelCheckpoint
 
 SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/Xception"
-SCENE_TEST_DATA_FOLDER_PATH = "/home/yan/Desktop/QlabChallengerRepo/dataset_299/scene_train_content_resize"
-PREDICT_MODEL = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/predict_loaded_models/XCEPTION_MODEL_WEIGHTS.04-0.81376.h5"
+SCENE_TEST_DATA_FOLDER_PATH = "C:/Users/Air/Desktop/ttt"
+#PREDICT_MODEL = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/predict_loaded_models/XCEPTION_MODEL_WEIGHTS.04-0.81376.h5"
 
 def GetJpgList(p):
     if p == "":
@@ -173,13 +173,9 @@ def Xception(img_rows, img_cols, color_type=1, num_classes=None):
     # Create model.
     model = Model(img_input, x_newfc, name='xception')
 
-    # load weights
-    model.load_weights('Xception/XCEPTION_MODEL_WEIGHTS.04-0.81376.h5')
-    
     # Learning rate is changed to 0.001
     sgd = SGD(lr=5e-6, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
-
 
     return model
 
@@ -237,7 +233,7 @@ if __name__ == '__main__':
         count += 1
         predict_json.append(predict_annotation_dic_temp)
 
-    predict_json_file_path = open("/home/yan/Desktop/Xception" + "_predict_train.json", "w")
+    predict_json_file_path = open("C:/Users/Air/Desktop/Xception" + "_predict_train.json", "w")
 
     json.dump(predict_json, predict_json_file_path)
 
