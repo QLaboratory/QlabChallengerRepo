@@ -18,7 +18,7 @@ from scale_layer import Scale
 
 # SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/imagenet_models"
 SCENE_MODEL_SAVE_PATH = "D:/QlabChallengerRepo/ai_challenger_scene/imagenet_models"
-SCENE_TEST_DATA_FOLDER_PATH = "D:/QlabChallengerRepo/dataset/scene_train_images_20170904_direct_resize_224_224"
+SCENE_TEST_DATA_FOLDER_PATH = "D:/QlabChallengerRepo/test/scene_test_direct_resize_224_224"
 
 def densenet161_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.5, dropout_rate=0.0, weight_decay=1e-4, num_classes=None):
     '''
