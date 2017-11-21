@@ -13,10 +13,11 @@ from keras.layers.pooling import AveragePooling2D, GlobalAveragePooling2D, MaxPo
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 import keras.backend as K
+from keras.callbacks import ModelCheckpoint
 from keras.utils import np_utils
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 from sklearn.metrics import log_loss
-from custom_layers.scale_layer import Scale
+from scale_layer import Scale
 
 SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/densenet121"
 
@@ -100,7 +101,7 @@ def densenet121_model(img_rows, img_cols, color_type=1, nb_dense_block=4, growth
       weights_path = 'densenet121/densenet121_weights_th.h5'
     else:
       # Use pre-trained weights for Tensorflow backend
-      weights_path = 'densenet121/densenet121_weights_tf.h5'
+      weights_path = 'densenet121/DENSENET161_MODEL_WEIGHTS_2017_11_21_22_32_48.h5'
 
     model.load_weights(weights_path, by_name=True)
 
@@ -210,7 +211,7 @@ if __name__ == '__main__':
     channel = 3
     num_classes = 80
     batch_size = 8
-    nb_epoch = 2
+    nb_epoch = 15
     nb_train_samples = 53880
     nb_validation_samples = 7120
 
@@ -246,12 +247,20 @@ if __name__ == '__main__':
     #print(train_generator.class_indices)
     #print(validation_generator.class_indices)
     
+    # Callback
+    checkpointer = ModelCheckpoint(filepath='/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/densenet121/DENSENET121_MODEL_WEIGHTS.{epoch:02d}-{val_acc:.5f}.hdf5',
+                                   monitor='val_acc',
+                                   verbose=1,
+                                   save_weights_only= True,
+                                   save_best_only=False)
+
     # Start Fine-tuning
     model.fit_generator(train_generator,
               steps_per_epoch=nb_train_samples//batch_size,
               epochs=nb_epoch,
               shuffle=True,
               verbose=1,
+              callbacks=[checkpointer],
               validation_data=validation_generator,
               validation_steps=nb_validation_samples//batch_size)
 

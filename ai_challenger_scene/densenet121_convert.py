@@ -13,7 +13,7 @@ from keras.models import Model
 import keras.backend as K
 
 from sklearn.metrics import log_loss
-from custom_layers.scale_layer import Scale
+from scale_layer import Scale
 
 SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/densenet121"
 
