@@ -4,11 +4,16 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf
+import json
 
 SUMMARY_LOG_SAVE_PATH = ""
 
+DENSENET_MODEL_PREDICT_RESULT_FILE = ""
+RESNET_MODEL_PREDICT_RESULT_FILE = ""
+XCEPTION_MODEL_PREDICT_RESULT_FILE = ""
+
 def VariableSummaries(var):
-  #¼ÇÂ¼ÕÅÁ¿
+  #è®°å½•å¼ é‡
   with tf.name_scope('summaries'):
     mean = tf.reduce_mean(var)
     tf.summary.scalar('mean', mean)
@@ -20,7 +25,7 @@ def VariableSummaries(var):
     tf.summary.histogram('histogram', var)
 
 def feed_dict(train, batch_size=256):
-  # TODO ÊµÏÖ±êÇ©Êı¾İµÄÑ¡È¡
+  # TODO å®ç°æ ‡ç­¾æ•°æ®çš„é€‰å–
   if train:
     xs, ys = mnist.train.next_batch(batch_size)
   else:
@@ -31,7 +36,7 @@ def feed_dict(train, batch_size=256):
 
 def main(unused_argv):
 
-    #Êı¾İ²ÎÊı
+    #æ•°æ®å‚æ•°
     net_num = 3
     img_num = 50000
     class_num = 80
@@ -39,37 +44,37 @@ def main(unused_argv):
     batch_size = 256
     learning_rate = 0.001
 
-    # ¼ÓÔØÑµÁ·Êı¾İ
-    # TODO json¸ñÊ½¶ÁÈ¡ feed_dictº¯ÊıÊµÏÖ
-    train_data = np.arange(1000*80*5, dtype=np.float32).reshape(1000, 80, 5)  # 5ÒªºÍÍøÂçÊıÒ»ÖÂ
+    # åŠ è½½è®­ç»ƒæ•°æ®
+    # TODO jsonæ ¼å¼è¯»å– feed_dictå‡½æ•°å®ç°
+    train_data = np.arange(1000*80*5, dtype=np.float32).reshape(1000, 80, 5)  # 5è¦å’Œç½‘ç»œæ•°ä¸€è‡´
     train_labels = np.arange(1000, dtype=np.int32).reshape(1000)
 
-    eval_data = np.arange(200*80*5, dtype=np.float32).reshape(200, 80, 5)  # 5ÒªºÍÍøÂçÊıÒ»ÖÂ
+    eval_data = np.arange(200*80*5, dtype=np.float32).reshape(200, 80, 5)  # 5è¦å’Œç½‘ç»œæ•°ä¸€è‡´
     eval_labels = np.arange(200, dtype=np.int32).reshape(200)
 
     sess = tf.InteractiveSession()
 
-    #ÊäÈëÕ¼Î»
+    #è¾“å…¥å ä½
     with tf.name_scope('input'):
         x = tf.placeholder(tf.float32, [None, class_num, net_num], name='x-input')
         y_ = tf.placeholder(tf.float32, [None, class_num], name='y-input')
 
-    '''SEÄ£¿é'''
-    #È«¾Ö³Ø»¯
+    '''SEæ¨¡å—'''
+    #å…¨å±€æ± åŒ–
     global_max_pooling = tf.reduce_max(x, 1, name='global_max_pooling')
     VariableSummaries(global_max_pooling)
 
-    #µÚÒ»²ãÈ«Á¬½Ó
+    #ç¬¬ä¸€å±‚å…¨è¿æ¥
     with tf.name_scope('fc1'):
         fc1 = tf.layers.dense(inputs=global_max_pooling, units=net_num, activation=tf.nn.relu, name='fc1')
     VariableSummaries(fc1)
 
-    #µÚ¶ş²ãÈ«Á¬½Ó
+    #ç¬¬äºŒå±‚å…¨è¿æ¥
     with tf.name_scope('fc2'):
         fc2 = tf.layers.dense(inputs=fc1, units=net_num, activation=tf.nn.sigmoid, name='fc2')
     VariableSummaries(fc2)
 
-    #¼ÓÈ¨
+    #åŠ æƒ
     with tf.name_scope('scale'):
         scale = tf.reshape(fc2, [-1, 1, net_num])
         scaled_x = x * fc2
@@ -77,23 +82,23 @@ def main(unused_argv):
 
     with tf.name_scope('cov1'):
         sum_x = tf.layers.conv1d(inputs=scaled_x, filters=1, strides=1, kernel_size=1)
-        # È¥³ı¶àÓàÎ¬Êı
+        # å»é™¤å¤šä½™ç»´æ•°
         y = tf.squeeze(sum_x)
     VariableSummaries(y)
 
-    #¼ÆËã½»²æìØ
+    #è®¡ç®—äº¤å‰ç†µ
     with tf.name_scope('cross_entropy'):
       diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
       with tf.name_scope('total'):
         cross_entropy = tf.reduce_mean(diff)
     tf.summary.scalar('cross_entropy', cross_entropy)
 
-    #ÑµÁ·²½Öè
+    #è®­ç»ƒæ­¥éª¤
     with tf.name_scope('train'):
       train_step = tf.train.AdamOptimizer(learning_rate).minimize(
           cross_entropy)
 
-    #¾«¶ÈÆÀ¹À
+    #ç²¾åº¦è¯„ä¼°
     with tf.name_scope('accuracy'):
       with tf.name_scope('correct_prediction'):
         correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
@@ -101,13 +106,13 @@ def main(unused_argv):
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     tf.summary.scalar('accuracy', accuracy)
 
-    #tensorboard¼ÇÂ¼
+    #tensorboardè®°å½•
     merged = tf.summary.merge_all()
     train_writer = tf.summary.FileWriter(SUMMARY_LOG_SAVE_PATH + '/train', sess.graph)
     test_writer = tf.summary.FileWriter(SUMMARY_LOG_SAVE_PATH + '/test')
     tf.global_variables_initializer().run()
 
-    #¿ªÊ¼ÑµÁ·»òÔ¤²â
+    #å¼€å§‹è®­ç»ƒæˆ–é¢„æµ‹
     for i in range(img_num//batch_size*epoch):
       if i % 20 == 0:  # Record summaries and test-set accuracy
         summary, acc = sess.run([merged, accuracy], feed_dict=feed_dict(False))
