@@ -2,6 +2,18 @@
 import os
 import json
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
+
+# matplotlib.use('qt4agg')
+# 指定默认字体
+matplotlib.rcParams['font.sans-serif'] = ['SimHei']
+matplotlib.rcParams['font.family'] = 'sans-serif'
+# 解决负号'-'显示为方块的问题
+matplotlib.rcParams['axes.unicode_minus'] = False
+
+# zhfont = matplotlib.font_manager.FontProperties(fname='C:\Windows\Fonts\simkai.ttf')
+
 
 OFFICIAL_CLASSIFICATION_RAW_FILE_PATH = r"D:\QlabChallengerRepo\ai_challenger_scene\classification_statistics\scene_validation_dictionaries.json"
 PREDICTION_CLASSIFICATION_FILE_PATH = r"D:\QlabChallengerRepo\ai_challenger_scene\classification_statistics\ResNet152_predict_validation.json"
@@ -57,7 +69,7 @@ for i in range(len(predictionClassificationLIST)):
             ClassificationErrorStatisticsMatrix[int(officail_label_id_temp), k+4] += 1
 
         classification_error_temp['label_id_predict_name'] = label_id_predict_name_temp
-        print(classification_error_temp)
+        # print(classification_error_temp)
         ClassificationErrorDetailDictionary.append(classification_error_temp)
 
 
@@ -82,23 +94,65 @@ for i in range(80):
         classification_error_statistic_name_temp.append(sceneClassesJSON[str(k)])
     classification_error_statistic_temp['classification_error_statistic_label_name'] = classification_error_statistic_name_temp
     ClassificationErrorStatisticDictionary.append(classification_error_statistic_temp)
-    print(classification_error_statistic_temp)
+    # print(classification_error_statistic_temp)
 
-
+# 输出场景分类错误，单张图片的详细信息
 (filepath, tempfilename) = os.path.split(PREDICTION_CLASSIFICATION_FILE_PATH)
 (shotname, extension) = os.path.splitext(tempfilename)
 CLASSIFICATION_ERROR_DETAIL_STATISTICS_FILE_PATH = shotname + "_classification_error_detail_statistics" + ".json"
 CLASSIFICATION_ERROR_STATISTICS_FILE = open(CLASSIFICATION_ERROR_DETAIL_STATISTICS_FILE_PATH, "w", encoding='UTF-8')
 
-print(len(ClassificationErrorDetailDictionary))
+# print(len(ClassificationErrorDetailDictionary))
 json.dump(ClassificationErrorDetailDictionary, CLASSIFICATION_ERROR_STATISTICS_FILE, indent=2, ensure_ascii=False)
 
-
+# 输出场景分类错误，每个场景的统计信息
 CLASSIFICATION_ERROR_TOTAL_STATISTICS_FILE_PATH = shotname + "_classification_error_total_statistics" + ".json"
 CLASSIFICATION_ERROR_TOTAL_STATISTICS_FILE = open(CLASSIFICATION_ERROR_TOTAL_STATISTICS_FILE_PATH, "w", encoding='UTF-8')
 json.dump(ClassificationErrorStatisticDictionary, CLASSIFICATION_ERROR_TOTAL_STATISTICS_FILE, indent=2, ensure_ascii=False)
 
-
+# 输出场景分类错误统计矩阵信息
 CLASSIFICATION_ERROR_STATISTICS_MATRIX_FILE_PATH = shotname + "_classification_error_statistics" + ".txt"
-print(ClassificationErrorStatisticsMatrix)
+# print(ClassificationErrorStatisticsMatrix)
 np.savetxt(CLASSIFICATION_ERROR_STATISTICS_MATRIX_FILE_PATH, ClassificationErrorStatisticsMatrix, fmt='%d', delimiter='\t', newline='\r\n')
+
+
+alphabetX = []
+alphabetY = []
+for i in range(80):
+    alphabetX.append(str(i))
+    alphabetY.append(sceneClassesJSON[str(i)])
+
+
+def ConfusionMatrixPng(cm):
+
+    norm_conf = []
+    for i in cm:
+        a = 0
+        tmp_arr = []
+        a = sum(i)
+        # print(a)
+        for j in i:
+            tmp_arr.append(float(j) / (float(a) + 1.1e-5))
+        norm_conf.append(tmp_arr)
+    fig = plt.figure()
+    plt.clf()
+    ax = fig.add_subplot(111)
+    ax.set_aspect(1)
+    res = ax.imshow(np.array(norm_conf), cmap=plt.cm.gray_r,
+                    interpolation='nearest')
+    height = len(cm)
+    width = len(cm[0])
+    cb = fig.colorbar(res)
+    # locs, labels = plt.xticks(range(width), alphabet[:width])
+    # for t in labels:
+    #     t.set_rotation(90)
+    # plt.xticks('orientation', 'vertical')
+    # locs, labels = xticks([1,2,3,4], ['Frogs', 'Hogs', 'Bogs', 'Slogs'])
+    # setp(alphabet, 'rotation', 'vertical')
+    plt.xticks(range(width), alphabetX[:width])
+    plt.yticks(range(height), alphabetY[:height])
+    plt.savefig('confusion_matrix.png', format='png')
+    plt.show()
+
+
+ConfusionMatrixPng(ClassificationErrorStatisticsMatrix[:, 4:len(ClassificationErrorStatisticsMatrix[0])])
