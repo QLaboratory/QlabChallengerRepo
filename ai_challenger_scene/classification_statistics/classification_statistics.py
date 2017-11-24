@@ -113,17 +113,22 @@ json.dump(ClassificationErrorStatisticDictionary, CLASSIFICATION_ERROR_TOTAL_STA
 # 输出场景分类错误统计矩阵信息
 CLASSIFICATION_ERROR_STATISTICS_MATRIX_FILE_PATH = shotname + "_classification_error_statistics" + ".txt"
 # print(ClassificationErrorStatisticsMatrix)
-np.savetxt(CLASSIFICATION_ERROR_STATISTICS_MATRIX_FILE_PATH, ClassificationErrorStatisticsMatrix, fmt='%d', delimiter='\t', newline='\r\n')
+# np.savetxt(CLASSIFICATION_ERROR_STATISTICS_MATRIX_FILE_PATH, ClassificationErrorStatisticsMatrix, fmt='%d', delimiter='\t', newline='\r\n')
 
+
+ClassificationErrorStatisticsMatrixSort = ClassificationErrorStatisticsMatrix[ClassificationErrorStatisticsMatrix[:,3].argsort()]
+np.savetxt(CLASSIFICATION_ERROR_STATISTICS_MATRIX_FILE_PATH, ClassificationErrorStatisticsMatrixSort, fmt='%d', delimiter='\t', newline='\r\n')
 
 alphabetX = []
 alphabetY = []
-for i in range(80):
-    alphabetX.append(str(i))
-    alphabetY.append(sceneClassesJSON[str(i)])
+count = 0
+for i in ClassificationErrorStatisticsMatrixSort:
+    alphabetX.append(str(count))
+    alphabetY.append(sceneClassesJSON[str(int(i[0]))])
+    count += 1
 
 
-def ConfusionMatrixPng(cm):
+def ConfusionMatrixPng(cm, ):
 
     norm_conf = []
     for i in cm:
@@ -155,4 +160,4 @@ def ConfusionMatrixPng(cm):
     plt.show()
 
 
-ConfusionMatrixPng(ClassificationErrorStatisticsMatrix[:, 4:len(ClassificationErrorStatisticsMatrix[0])])
+ConfusionMatrixPng(ClassificationErrorStatisticsMatrix[:, 4:len(ClassificationErrorStatisticsMatrixSort[0])])
