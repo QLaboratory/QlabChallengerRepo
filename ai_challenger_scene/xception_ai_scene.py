@@ -23,6 +23,7 @@ from __future__ import absolute_import
 import warnings
 import numpy as np
 import os
+import gc
 import warnings
 from datetime import datetime
 from keras.preprocessing import image
@@ -46,6 +47,12 @@ from keras.applications.imagenet_utils import _obtain_input_shape
 from keras.utils import np_utils
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 from keras.callbacks import ModelCheckpoint
+from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img 
+from scipy import misc  
+import numpy
+import numpy.random
+import scipy.ndimage
+import scipy.misc
 
 SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/Xception"
 
@@ -154,10 +161,10 @@ def Xception(img_rows, img_cols, color_type=1, num_classes=None):
     model = Model(img_input, x_newfc, name='xception')
 
     # load weights
-    model.load_weights('Xception/XCEPTION_MODEL_WEIGHTS.04-0.81376.h5')
+    model.load_weights('Xception/XCEPTION_MODEL_WEIGHTS.01-0.74157.h5')
     
     # Learning rate is changed to 0.001
-    sgd = SGD(lr=1e-7, decay=1e-6, momentum=0.9, nesterov=True)
+    sgd = SGD(lr=1e-5, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 
 
@@ -170,14 +177,29 @@ def preprocess_input(x):
     x *= 2.
     return x
 
+def random_crop_image(image):
+      height, width = image.shape[:2]
+      random_array = numpy.random.random(size=4);
+      w = int((width*0.5)*(1+random_array[0]*0.5))
+      h = int((height*0.5)*(1+random_array[1]*0.5))
+      x = int(random_array[2]*(width-w))
+      y = int(random_array[3]*(height-h))
+      
+      image_crop = image[y:h+y,x:w+x,0:3]
+      image_crop = misc.imresize(image_crop,image.shape)
+
+      image_crop = image_crop/255.
+      image_crop = image_crop - 0.5
+      image_crop = image_crop*2.0
+      return image_crop
 
 if __name__ == '__main__':
 
     img_rows, img_cols = 299, 299 # Resolution of inputs
     channel = 3
     num_classes = 80
-    batch_size = 16
-    nb_epoch = 5
+    batch_size = 8
+    nb_epoch = 2
     nb_train_samples = 53880
     nb_validation_samples = 7120
 
@@ -197,16 +219,19 @@ if __name__ == '__main__':
                 shear_range=0.2,
                 zoom_range=0.2,
                 horizontal_flip=True,
-                fill_mode='nearest')
-    test_datagen = ImageDataGenerator()
+                preprocessing_function=random_crop_image,
+                fill_mode='reflect')
+    test_datagen = ImageDataGenerator(
+                preprocessing_function=random_crop_image,
+                fill_mode='reflect')
 
     train_generator = train_datagen.flow_from_directory(
-                '/home/yan/Desktop/QlabChallengerRepo/dataset_299/data/train/',
+                '/home/yan/Desktop/QlabChallengerRepo/dataset/train/',
                 target_size=(img_rows,img_cols),
                 batch_size=batch_size,
                 classes=our_class)
     validation_generator = test_datagen.flow_from_directory(
-                '/home/yan/Desktop/QlabChallengerRepo/dataset_299/data/valid/',
+                '/home/yan/Desktop/QlabChallengerRepo/dataset/valid/',
                 target_size=(img_rows,img_cols),
                 batch_size=batch_size,
                 classes=our_class)
@@ -230,7 +255,4 @@ if __name__ == '__main__':
               validation_data=validation_generator,
               validation_steps=nb_validation_samples//batch_size)
 
-    CURRENT_TIME = "XCEPTION_MODEL_WEIGHTS_"+datetime.now().strftime('%Y_%m_%d_%H_%M_%S')+".h5"
-    CURRENT_SCENE_MODEL_SAVE_PATH = os.path.join(SCENE_MODEL_SAVE_PATH, CURRENT_TIME)
-    model.save_weights(CURRENT_SCENE_MODEL_SAVE_PATH)
-
+    gc.collect()

@@ -49,9 +49,10 @@ from keras.applications.imagenet_utils import _obtain_input_shape
 from keras.utils import np_utils
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 from keras.callbacks import ModelCheckpoint
+import cv2
 
 SCENE_MODEL_SAVE_PATH = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/Xception"
-SCENE_TEST_DATA_FOLDER_PATH = "/home/yan/Desktop/QlabChallengerRepo/test/scene_test_direct_resize_299_299"
+SCENE_TEST_DATA_FOLDER_PATH = "/home/yan/Desktop/QlabChallengerRepo/dataset/test"
 PREDICT_MODEL = "/home/yan/Desktop/QlabChallengerRepo/ai_challenger_scene/predict_loaded_models/XCEPTION_MODEL_WEIGHTS.04-0.81376.h5"
 
 def GetJpgList(p):
@@ -212,32 +213,50 @@ if __name__ == '__main__':
     predict_json = []
     count = 1
     totalnum = str(len(test_data_files))
-    # predict_annotation_dic_temp = {}
-    # predict_annotation_dic_temp['image_id'] = "1.jpg"
-    # predict_annotation_dic_temp['label_id'] = [1, 2, 3]
-    # predict_json.append(predict_annotation_dic_temp)
-    # predict_annotation_dic_temp = {}
-    # predict_annotation_dic_temp['image_id'] = "2.jpg"
-    # predict_annotation_dic_temp['label_id'] = [2, 3, 4]
-    # predict_json.append(predict_annotation_dic_temp)
 
     for i in test_data_files:
-        im = Image.open(os.path.join(SCENE_TEST_DATA_FOLDER_PATH, i))
-        im_array = np.array(im).reshape(1, img_rows, img_cols, channel)
-        predictions_valid = model.predict(im_array, verbose=0)
+        image = cv2.imread(os.path.join(SCENE_TEST_DATA_FOLDER_PATH, i));
+        image_height = image.shape[0]
+        image_width = image.shape[1]
+        image_height_step = int(image_height*0.1)
+        image_width_step = int(image_width*0.1)
+
+        image_list = list();
+
+        image_list.append(image[image_height_step*0:image_height_step*8,image_width_step*0:image_width_step*8])
+        image_list.append(image[image_height_step*1:image_height_step*9,image_width_step*1:image_width_step*9])
+        image_list.append(image[image_height_step*0:image_height_step*8,image_width_step*2:image_width_step*10])
+        image_list.append(image[image_height_step*2:image_height_step*10,image_width_step*0:image_width_step*8])
+        image_list.append(image[image_height_step*2:image_height_step*10,image_width_step*2:image_width_step*10])
+
+        image = cv2.flip(image,1)
+
+        image_list.append(image[image_height_step*0:image_height_step*8,image_width_step*0:image_width_step*8])
+        image_list.append(image[image_height_step*1:image_height_step*9,image_width_step*1:image_width_step*9])
+        image_list.append(image[image_height_step*0:image_height_step*8,image_width_step*2:image_width_step*10])
+        image_list.append(image[image_height_step*2:image_height_step*10,image_width_step*0:image_width_step*8])
+        image_list.append(image[image_height_step*2:image_height_step*10,image_width_step*2:image_width_step*10])
 
         predict_annotation_dic_temp = {}
         predict_annotation_dic_temp['image_id'] = i
+        predictions_valid = [0]*num_classes
+        for image in image_list:
+            image_current = cv2.resize(image,(img_rows,img_cols),interpolation=cv2.INTER_CUBIC);
+            im_array = np.array(image_current).reshape(1, img_rows, img_cols, channel)
+            predictions_valid_current = model.predict(im_array, verbose=0)
+            predictions_valid = np.add(predictions_valid_current,predictions_valid)
+            
+        predictions_valid = np.true_divide(predictions_valid, 10.0)
+        # print(predict_annotation_dic_temp)
+        # print(predict_label_id)
         predict_label_id = predictions_valid[0].argsort()[-3:][::-1]
         predict_annotation_dic_temp['label_id'] = predict_label_id.tolist()
         if (count % 100 == 0):
             print(str(count) + "/" + totalnum)
-        # print(predict_annotation_dic_temp)
-        # print(predict_label_id)
         count += 1
         predict_json.append(predict_annotation_dic_temp)
 
-    predict_json_file_path = open("/home/yan/Desktop/Xception" + "_predict_result.json", "w")
+    predict_json_file_path = open("/home/yan/Desktop/X_ception" + "_predict_result.json", "w")
 
     json.dump(predict_json, predict_json_file_path)
 
